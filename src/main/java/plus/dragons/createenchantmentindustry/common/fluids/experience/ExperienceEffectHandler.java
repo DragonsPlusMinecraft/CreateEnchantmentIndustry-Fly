@@ -18,33 +18,30 @@
 
 package plus.dragons.createenchantmentindustry.common.fluids.experience;
 
+import com.zurrtum.create.api.effect.OpenPipeEffectHandler;
+import com.zurrtum.create.infrastructure.fluids.FluidStack;
 import java.util.List;
+import net.fabricmc.fabric.api.entity.FakePlayer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
-import net.neoforged.neoforge.fluids.FluidStack;
-import plus.dragons.createdragonsplus.common.fluids.pipe.ConsumingOpenPipeEffectHandler;
 import plus.dragons.createenchantmentindustry.common.registry.CEIAdvancements;
 
-public class ExperienceEffectHandler implements ConsumingOpenPipeEffectHandler {
+public class ExperienceEffectHandler implements OpenPipeEffectHandler {
     @Override
-    public int consume(Level level, AABB area, FluidStack contained) {
+    public void apply(Level level, AABB area, FluidStack contained) {
         if (!(level instanceof ServerLevel serverLevel))
-            return 0;
-        int amount = contained.getAmount();
-        List<ServerPlayer> players = level.getEntitiesOfClass(ServerPlayer.class, area, player -> !player.isFakePlayer());
+            return;
+        List<ServerPlayer> players = level.getEntitiesOfClass(
+                ServerPlayer.class, area, player -> !(player instanceof FakePlayer));
         if (players.isEmpty()) {
             ExperienceOrb.award(serverLevel, area.getCenter(), ExperienceHelper.getExperienceFromFluid(contained));
         } else {
             ServerPlayer player = players.get(level.random.nextInt(players.size()));
-            ExperienceHelper.award(amount, player);
+            ExperienceHelper.award(ExperienceHelper.getExperienceFromFluid(contained), player);
             CEIAdvancements.A_SHOWER_EXPERIENCE.awardTo(player);
         }
-        return amount;
     }
-
-    @Override
-    public void apply(Level level, AABB area, FluidStack fluid) {}
 }

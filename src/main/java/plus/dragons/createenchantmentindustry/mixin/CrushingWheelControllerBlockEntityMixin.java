@@ -18,7 +18,7 @@
 
 package plus.dragons.createenchantmentindustry.mixin;
 
-import com.simibubi.create.content.kinetics.crusher.CrushingWheelControllerBlockEntity;
+import com.zurrtum.create.content.kinetics.crusher.CrushingWheelControllerBlockEntity;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
@@ -33,7 +33,7 @@ public class CrushingWheelControllerBlockEntityMixin {
     @Shadow(remap = false)
     public Entity processingEntity;
 
-    @Inject(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/Entity;hurt(Lnet/minecraft/world/damagesource/DamageSource;F)Z", shift = At.Shift.AFTER))
+    @Inject(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/Entity;hurtServer(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/damagesource/DamageSource;F)Z", shift = At.Shift.AFTER))
     private void tick$dropExperienceNuggets(CallbackInfo ci) {
         if (!processingEntity.isAlive() && processingEntity instanceof LivingEntity livingEntity)
             CrushingWheelExperience.dropForCrushedEntity((CrushingWheelControllerBlockEntity) (Object) this, livingEntity);

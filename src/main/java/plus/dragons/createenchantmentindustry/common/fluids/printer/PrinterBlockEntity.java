@@ -18,65 +18,64 @@
 
 package plus.dragons.createenchantmentindustry.common.fluids.printer;
 
-import static com.simibubi.create.content.kinetics.belt.behaviour.BeltProcessingBehaviour.ProcessingResult.HOLD;
-import static com.simibubi.create.content.kinetics.belt.behaviour.BeltProcessingBehaviour.ProcessingResult.PASS;
+import static com.zurrtum.create.content.kinetics.belt.behaviour.BeltProcessingBehaviour.ProcessingResult.HOLD;
+import static com.zurrtum.create.content.kinetics.belt.behaviour.BeltProcessingBehaviour.ProcessingResult.PASS;
 
-import com.simibubi.create.AllSoundEvents;
-import com.simibubi.create.api.equipment.goggles.IHaveGoggleInformation;
-import com.simibubi.create.content.kinetics.belt.behaviour.BeltProcessingBehaviour;
-import com.simibubi.create.content.kinetics.belt.behaviour.BeltProcessingBehaviour.ProcessingResult;
-import com.simibubi.create.content.kinetics.belt.behaviour.TransportedItemStackHandlerBehaviour;
-import com.simibubi.create.content.kinetics.belt.behaviour.TransportedItemStackHandlerBehaviour.TransportedResult;
-import com.simibubi.create.content.kinetics.belt.transport.TransportedItemStack;
-import com.simibubi.create.foundation.blockEntity.SmartBlockEntity;
-import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
-import com.simibubi.create.foundation.blockEntity.behaviour.CenteredSideValueBoxTransform;
-import com.simibubi.create.foundation.blockEntity.behaviour.ValueBoxTransform;
-import com.simibubi.create.foundation.blockEntity.behaviour.fluid.SmartFluidTankBehaviour;
-import java.util.ArrayList;
+import com.zurrtum.create.AllSoundEvents;
+import com.zurrtum.create.api.behaviour.BlockEntityBehaviour;
+import com.zurrtum.create.content.kinetics.belt.behaviour.BeltProcessingBehaviour;
+import com.zurrtum.create.content.kinetics.belt.behaviour.BeltProcessingBehaviour.ProcessingResult;
+import com.zurrtum.create.content.kinetics.belt.behaviour.TransportedItemStackHandlerBehaviour;
+import com.zurrtum.create.content.kinetics.belt.behaviour.TransportedItemStackHandlerBehaviour.TransportedResult;
+import com.zurrtum.create.content.kinetics.belt.transport.TransportedItemStack;
+import com.zurrtum.create.foundation.blockEntity.SmartBlockEntity;
+import com.zurrtum.create.foundation.blockEntity.behaviour.fluid.SmartFluidTankBehaviour;
+import com.zurrtum.create.infrastructure.fluids.FluidStack;
+import com.zurrtum.create.infrastructure.transfer.FluidInventoryStorage;
 import java.util.List;
-import net.createmod.catnip.math.VecHelper;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.HolderLookup.Provider;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import org.jetbrains.annotations.Nullable;
-import plus.dragons.createdragonsplus.common.advancements.AdvancementBehaviour;
-import plus.dragons.createdragonsplus.util.FieldsNullabilityUnknownByDefault;
+import plus.dragons.createenchantmentindustry.common.advancement.AdvancementBehaviour;
 import plus.dragons.createenchantmentindustry.common.fluids.printer.behaviour.AddressPrintingBehaviour;
 import plus.dragons.createenchantmentindustry.common.fluids.printer.behaviour.CustomNamePrintingBehaviour;
 import plus.dragons.createenchantmentindustry.common.fluids.printer.behaviour.PackagePatternPrintingBehaviour;
+import plus.dragons.createenchantmentindustry.common.fluids.printer.behaviour.PrintingBehaviour;
 import plus.dragons.createenchantmentindustry.common.registry.CEIAdvancements;
 import plus.dragons.createenchantmentindustry.common.registry.CEIStats;
 import plus.dragons.createenchantmentindustry.config.CEIConfig;
+import plus.dragons.createenchantmentindustry.util.CEIFluidUnits;
 
-@FieldsNullabilityUnknownByDefault
-public class PrinterBlockEntity extends SmartBlockEntity implements IHaveGoggleInformation {
+public class PrinterBlockEntity extends SmartBlockEntity {
     public static final int PROCESSING_TIME = 50;
+    private static final int COMPLETION_TICKS = 5;
     protected SmartFluidTankBehaviour tank;
     private PrinterBehaviour printer;
     public int processingTicks = -1;
     private AdvancementBehaviour advancement;
+    private @Nullable ActivePrinting activePrinting;
 
     public PrinterBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
     }
 
     @Override
-    public void addBehaviours(List<BlockEntityBehaviour> behaviours) {
-        tank = SmartFluidTankBehaviour.single(this, CEIConfig.fluids().printerFluidCapacity.get());
-        printer = new PrinterBehaviour(this, tank, new CenteredSideValueBoxTransform(
-                (state, direction) -> state.getValue(PrinterBlock.FACING) == direction));
+    public void addBehaviours(List<BlockEntityBehaviour<?>> behaviours) {
+        tank = SmartFluidTankBehaviour.single(
+                this,
+                Math.toIntExact(CEIFluidUnits.millibuckets(CEIConfig.fluids().printerFluidCapacity.get())));
+        printer = new PrinterBehaviour(this, tank);
         BeltProcessingBehaviour processing = new BeltProcessingBehaviour(this)
                 .whenItemEnters(this::onItemEnters)
                 .whileItemHeld(this::onItemHeld);
@@ -87,10 +86,10 @@ public class PrinterBlockEntity extends SmartBlockEntity implements IHaveGoggleI
         behaviours.add(advancement);
     }
 
-    public @Nullable IFluidHandler getFluidHandler(@Nullable Direction side) {
-        if (side != Direction.DOWN)
-            return tank.getCapability();
-        return null;
+    public @Nullable Storage<FluidVariant> getFluidStorage(@Nullable Direction side) {
+        return tank != null && side != Direction.DOWN
+                ? FluidInventoryStorage.of(tank.getCapability(), side)
+                : null;
     }
 
     private FluidStack getFluidInTank() {
@@ -112,13 +111,14 @@ public class PrinterBlockEntity extends SmartBlockEntity implements IHaveGoggleI
         if (!printing.isValid())
             return PASS;
 
-        if (printing.getRequiredItemCount(level, transported.stack) == 0)
+        int requiredItem = printing.getRequiredItemCount(level, transported.stack);
+        if (requiredItem <= 0 || transported.stack.getCount() < requiredItem)
             return PASS;
 
         var fluidStack = getFluidInTank();
         if (fluidStack.isEmpty())
             return HOLD;
-        if (printing.getRequiredFluidAmount(level, transported.stack, fluidStack) == 0)
+        if (printing.getRequiredFluidAmount(level, transported.stack, fluidStack) <= 0)
             return PASS;
 
         return HOLD;
@@ -128,72 +128,141 @@ public class PrinterBlockEntity extends SmartBlockEntity implements IHaveGoggleI
         Level level = this.level;
         assert level != null;
 
-        if (processingTicks != -1 && processingTicks != 5)
+        if (processingTicks > COMPLETION_TICKS) {
+            if (activePrinting == null || !activePrinting.matchesInput(transported.stack)) {
+                cancelProcessing();
+                return startProcessing(transported);
+            }
             return HOLD;
+        }
+
+        if (processingTicks == -1)
+            return startProcessing(transported);
+
+        ActivePrinting active = activePrinting;
+        if (active == null) {
+            cancelProcessing();
+            return startProcessing(transported);
+        }
+        if (!active.matchesInput(transported.stack)) {
+            cancelProcessing();
+            return startProcessing(transported);
+        }
+
+        var fluidStack = getFluidInTank();
+        if (!active.matchesFluid(fluidStack) || fluidStack.getAmount() < active.requiredFluidAmount())
+            return HOLD;
+
+        var completedPrinting = PrintingBehaviour.create(level, tank, active.template()).result();
+        if (completedPrinting.isEmpty()) {
+            cancelProcessing();
+            return PASS;
+        }
+
+        transported.clearFanProcessingData();
+        TransportedItemStack output = transported.copy();
+        output.stack = active.result().copy();
+        TransportedItemStack remains = null;
+        if (transported.stack.getCount() > active.requiredItemCount()) {
+            remains = transported.copy();
+            remains.stack.shrink(active.requiredItemCount());
+        }
+        handler.handleProcessingOnItem(
+                transported,
+                TransportedResult.convertToAndLeaveHeld(List.of(output), remains));
+
+        fluidStack.decrement(active.requiredFluidAmount());
+        setFluidInTank(fluidStack);
+        PrintingBehaviour printing = completedPrinting.get();
+        printing.getResult(level, active.input().copy(), active.fluid().copy());
+        printing.onFinished(level, worldPosition, this);
+        awardPrintingAdvancements(active.result(), printing);
+        advancement.awardStat(CEIStats.PRINT.get(), 1);
+        finishProcessing();
+        notifyUpdate();
+        return HOLD;
+    }
+
+    private ProcessingResult startProcessing(TransportedItemStack transported) {
+        Level level = this.level;
+        assert level != null;
 
         var printing = printer.getPrintingBehaviour();
         if (!printing.isValid())
             return PASS;
 
         var requiredItem = printing.getRequiredItemCount(level, transported.stack);
-        if (requiredItem == 0)
+        if (requiredItem <= 0 || transported.stack.getCount() < requiredItem)
             return PASS;
 
         var fluidStack = getFluidInTank();
         var requiredFluid = printing.getRequiredFluidAmount(level, transported.stack, fluidStack);
-        if (requiredFluid == 0)
+        if (requiredFluid <= 0)
             return PASS;
         if (fluidStack.getAmount() < requiredFluid)
             return HOLD;
 
-        if (processingTicks == -1) {
-            processingTicks = PROCESSING_TIME;
-            notifyUpdate();
-            AllSoundEvents.SPOUTING.playOnServer(level, worldPosition, 0.75f, 0.9f + 0.2f * level.random.nextFloat());
-            return HOLD;
-        }
-
-        ItemStack resultItem = printing.getResult(level, transported.stack.split(requiredItem), fluidStack);
-        if (!resultItem.isEmpty()) {
-            transported.clearFanProcessingData();
-            TransportedItemStack held = null;
-            TransportedItemStack result = transported.copy();
-            result.stack = resultItem;
-            if (!transported.stack.isEmpty())
-                held = transported.copy();
-            List<TransportedItemStack> resultList = new ArrayList<>();
-            resultList.add(result);
-            handler.handleProcessingOnItem(transported, TransportedResult.convertToAndLeaveHeld(resultList, held));
-            if (printer.getPrintingBehaviour() instanceof CustomNamePrintingBehaviour) advancement.trigger(CEIAdvancements.BRAND_REGISTRY.builtinTrigger());
-            else if (resultItem.is(Items.WRITTEN_BOOK)) advancement.trigger(CEIAdvancements.COPIABLE_MASTERPIECE.builtinTrigger());
-            else if (resultItem.is(Items.ENCHANTED_BOOK)) advancement.trigger(CEIAdvancements.COPIABLE_MYSTERY.builtinTrigger());
-            else if (printer.getPrintingBehaviour() instanceof PackagePatternPrintingBehaviour) advancement.trigger(CEIAdvancements.ASSEMBLY_AESTHETICS.builtinTrigger());
-            else if (printer.getPrintingBehaviour() instanceof AddressPrintingBehaviour) advancement.trigger(CEIAdvancements.SUPPLY_CHAIN_REFACTOR.builtinTrigger());
-        }
-        fluidStack.shrink(requiredFluid);
-        setFluidInTank(fluidStack);
+        ItemStack input = transported.stack.copy();
+        input.setCount(requiredItem);
+        ItemStack resultItem = printing.getResult(level, input.copy(), fluidStack.copy());
+        if (resultItem.isEmpty())
+            return PASS;
+        FluidStack fluidCost = fluidStack.copy();
+        fluidCost.setAmount(requiredFluid);
+        activePrinting = new ActivePrinting(
+                input,
+                printer.getFilter().copy(),
+                fluidCost,
+                resultItem.copy(),
+                requiredItem,
+                requiredFluid);
+        processingTicks = PROCESSING_TIME;
         notifyUpdate();
-        printing.onFinished(level, worldPosition, this);
-        advancement.awardStat(CEIStats.PRINT.get(), 1);
+        AllSoundEvents.SPOUTING.playOnServer(level, worldPosition, 0.75f, 0.9f + 0.2f * level.random.nextFloat());
         return HOLD;
     }
 
-    @Override
-    protected void write(CompoundTag tag, Provider registries, boolean clientPacket) {
-        super.write(tag, registries, clientPacket);
-        tag.putInt("ProcessingTicks", processingTicks);
+    private void awardPrintingAdvancements(ItemStack resultItem, PrintingBehaviour printing) {
+        if (printing instanceof CustomNamePrintingBehaviour) advancement.trigger(CEIAdvancements.BRAND_REGISTRY.builtinTrigger());
+        else if (resultItem.is(Items.WRITTEN_BOOK)) advancement.trigger(CEIAdvancements.COPIABLE_MASTERPIECE.builtinTrigger());
+        else if (resultItem.is(Items.ENCHANTED_BOOK)) advancement.trigger(CEIAdvancements.COPIABLE_MYSTERY.builtinTrigger());
+        else if (printing instanceof PackagePatternPrintingBehaviour) advancement.trigger(CEIAdvancements.ASSEMBLY_AESTHETICS.builtinTrigger());
+        else if (printing instanceof AddressPrintingBehaviour) advancement.trigger(CEIAdvancements.SUPPLY_CHAIN_REFACTOR.builtinTrigger());
+    }
+
+    private void finishProcessing() {
+        processingTicks = -1;
+        activePrinting = null;
+    }
+
+    private void cancelProcessing() {
+        if (processingTicks != -1 || activePrinting != null) {
+            finishProcessing();
+            notifyUpdate();
+        }
     }
 
     @Override
-    protected void read(CompoundTag tag, Provider registries, boolean clientPacket) {
-        super.read(tag, registries, clientPacket);
-        processingTicks = tag.getInt("ProcessingTicks");
+    protected void write(ValueOutput output, boolean clientPacket) {
+        super.write(output, clientPacket);
+        output.putInt("ProcessingTicks", processingTicks);
+        if (activePrinting != null)
+            activePrinting.write(output.child("ActivePrinting"));
+    }
+
+    @Override
+    protected void read(ValueInput input, boolean clientPacket) {
+        super.read(input, clientPacket);
+        processingTicks = input.getIntOr("ProcessingTicks", -1);
+        activePrinting = input.child("ActivePrinting").map(ActivePrinting::load).orElse(null);
+        if (processingTicks >= 0 && activePrinting == null)
+            processingTicks = -1;
     }
 
     @Override
     public void tick() {
         super.tick();
-        if (processingTicks >= 0) {
+        if (processingTicks > COMPLETION_TICKS) {
             processingTicks--;
         }
     }
@@ -203,23 +272,67 @@ public class PrinterBlockEntity extends SmartBlockEntity implements IHaveGoggleI
         return super.createRenderBoundingBox().expandTowards(0, -2, 0);
     }
 
-    @Override
     public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
         assert level != null;
-        boolean added = containedFluidTooltip(tooltip, isPlayerSneaking, tank.getPrimaryHandler());
+        FluidStack fluid = tank.getPrimaryHandler().getFluid();
+        boolean added = false;
+        if (!fluid.isEmpty()) {
+            tooltip.add(fluid.getName());
+            tooltip.add(Component.literal(
+                    fluid.getAmount() + " / " + tank.getPrimaryHandler().getMaxAmountPerStack()));
+            added = true;
+        }
         added |= printer.getPrintingBehaviour().addToGoggleTooltip(tooltip, isPlayerSneaking);
         return added;
     }
 
-    protected static class PrinterFilterSlot extends ValueBoxTransform.Sided {
-        @Override
-        protected Vec3 getSouthLocation() {
-            return VecHelper.voxelSpace(8, 8, 16);
+    private record ActivePrinting(
+            ItemStack input,
+            ItemStack template,
+            FluidStack fluid,
+            ItemStack result,
+            int requiredItemCount,
+            int requiredFluidAmount) {
+        void write(ValueOutput output) {
+            output.store("Input", ItemStack.CODEC, input);
+            output.store("Template", ItemStack.CODEC, template);
+            output.store("Fluid", FluidStack.CODEC, fluid);
+            output.store("Result", ItemStack.CODEC, result);
+            output.putInt("RequiredItemCount", requiredItemCount);
+            output.putInt("RequiredFluidAmount", requiredFluidAmount);
         }
 
-        @Override
-        protected boolean isSideActive(BlockState state, Direction direction) {
-            return state.getValue(PrinterBlock.FACING) == direction;
+        static @Nullable ActivePrinting load(ValueInput inputView) {
+            ItemStack input = inputView.read("Input", ItemStack.CODEC).orElse(ItemStack.EMPTY);
+            ItemStack template = inputView.read("Template", ItemStack.CODEC).orElse(ItemStack.EMPTY);
+            FluidStack fluid = inputView.read("Fluid", FluidStack.CODEC).orElse(FluidStack.EMPTY);
+            ItemStack result = inputView.read("Result", ItemStack.CODEC).orElse(ItemStack.EMPTY);
+            int requiredItemCount = inputView.getIntOr("RequiredItemCount", 0);
+            int requiredFluidAmount = inputView.getIntOr("RequiredFluidAmount", 0);
+            if (input.isEmpty()
+                    || template.isEmpty()
+                    || fluid.isEmpty()
+                    || result.isEmpty()
+                    || requiredItemCount <= 0
+                    || requiredFluidAmount <= 0
+                    || input.getCount() != requiredItemCount
+                    || fluid.getAmount() != requiredFluidAmount)
+                return null;
+            return new ActivePrinting(
+                    input,
+                    template,
+                    fluid,
+                    result,
+                    requiredItemCount,
+                    requiredFluidAmount);
+        }
+
+        boolean matchesInput(ItemStack stack) {
+            return stack.getCount() >= requiredItemCount && ItemStack.isSameItemSameComponents(input, stack);
+        }
+
+        boolean matchesFluid(FluidStack stack) {
+            return FluidStack.areFluidsAndComponentsEqual(fluid, stack);
         }
     }
 }

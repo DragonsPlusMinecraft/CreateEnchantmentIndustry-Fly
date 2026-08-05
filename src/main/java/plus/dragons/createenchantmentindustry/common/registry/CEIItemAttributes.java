@@ -18,49 +18,43 @@
 
 package plus.dragons.createenchantmentindustry.common.registry;
 
-import static plus.dragons.createenchantmentindustry.common.CEICommon.REGISTRATE;
-
-import com.simibubi.create.AllRecipeTypes;
-import com.simibubi.create.api.registry.CreateRegistries;
-import com.simibubi.create.content.logistics.item.filter.attribute.ItemAttributeType;
-import com.simibubi.create.content.logistics.item.filter.attribute.SingletonItemAttribute;
+import com.zurrtum.create.AllRecipeTypes;
+import com.zurrtum.create.api.registry.CreateRegistries;
+import com.zurrtum.create.content.logistics.item.filter.attribute.ItemAttributeType;
+import com.zurrtum.create.content.logistics.item.filter.attribute.SingletonItemAttribute;
 import java.util.function.BiPredicate;
-import net.minecraft.core.Holder;
+import net.minecraft.core.Registry;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.SingleRecipeInput;
 import net.minecraft.world.level.Level;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredRegister;
+import plus.dragons.createdragonsplus.common.recipe.CDPRecipeAccess;
 import plus.dragons.createenchantmentindustry.common.CEICommon;
 import plus.dragons.createenchantmentindustry.common.kinetics.grindstone.GrindstoneHelper;
 
-public class CEIItemAttributes {
-    private static final DeferredRegister<ItemAttributeType> ITEM_ATTRIBUTES = DeferredRegister
-            .create(CreateRegistries.ITEM_ATTRIBUTE_TYPE, CEICommon.ID);
-
-    public static final Holder<ItemAttributeType> PROCESSABLE_BY_MECHANICAL_GRINDSTONE = attribute("processable_by_mechanical_grindstone",
-            "can be processed by Mechanical Grindstone",
-            "cannot be processed by Mechanical Grindstone",
-            ((itemStack, level) -> {
-                var input = new SingleRecipeInput(itemStack);
-                var recipeManager = level.getRecipeManager();
-                var grinding = recipeManager.getRecipeFor(CEIRecipes.GRINDING.getType(), input, level);
-                if (grinding.isPresent())
+public final class CEIItemAttributes {
+    public static final ItemAttributeType PROCESSABLE_BY_MECHANICAL_GRINDSTONE = attribute(
+            "processable_by_mechanical_grindstone",
+            (itemStack, level) -> {
+                SingleRecipeInput input = new SingleRecipeInput(itemStack);
+                if (CDPRecipeAccess.getFirst(level, CEIRecipes.GRINDING.getType(), input).isPresent()) {
                     return true;
-                if (recipeManager.getRecipeFor(AllRecipeTypes.SANDPAPER_POLISHING.getType(), input, level).isPresent())
+                }
+                if (CDPRecipeAccess.getFirst(level, AllRecipeTypes.SANDPAPER_POLISHING, input).isPresent()) {
                     return true;
+                }
                 return GrindstoneHelper.canItemBeGrinded(itemStack, ItemStack.EMPTY);
-            }));
+            });
 
-    private static Holder<ItemAttributeType> attribute(String name, String description, String invertedDescription, BiPredicate<ItemStack, Level> predicate) {
-        String descriptionKey = "create.item_attributes." + CEICommon.ID + "." + name;
-        String invertedDescriptionKey = descriptionKey + ".inverted";
-        REGISTRATE.addRawLang(descriptionKey, description);
-        REGISTRATE.addRawLang(invertedDescriptionKey, invertedDescription);
-        return ITEM_ATTRIBUTES.register(name, () -> new SingletonItemAttribute.Type(type -> new SingletonItemAttribute(type, predicate, CEICommon.ID + "." + name)));
+    private CEIItemAttributes() {}
+
+    public static void register() {
+        // Class initialization performs registration.
     }
 
-    public static void register(IEventBus modBus) {
-        ITEM_ATTRIBUTES.register(modBus);
+    private static ItemAttributeType attribute(String name, BiPredicate<ItemStack, Level> predicate) {
+        Identifier id = CEICommon.asResource(name);
+        ItemAttributeType type = new SingletonItemAttribute.Type(attributeType -> new SingletonItemAttribute(attributeType, predicate, CEICommon.ID + "." + name));
+        return Registry.register(CreateRegistries.ITEM_ATTRIBUTE_TYPE, id, type);
     }
 }

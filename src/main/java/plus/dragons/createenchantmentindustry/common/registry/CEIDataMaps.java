@@ -18,206 +18,495 @@
 
 package plus.dragons.createenchantmentindustry.common.registry;
 
-import static net.minecraft.world.item.enchantment.Enchantments.INFINITY;
-import static net.minecraft.world.item.enchantment.Enchantments.MENDING;
-import static plus.dragons.createenchantmentindustry.common.CEICommon.REGISTRATE;
-
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
-import com.simibubi.create.AllBlocks;
-import com.simibubi.create.AllItems;
-import com.simibubi.create.foundation.fluid.FluidHelper;
-import com.tterrag.registrate.providers.ProviderType;
-import com.tterrag.registrate.providers.RegistrateDataMapProvider;
+import com.mojang.serialization.JsonOps;
+import com.zurrtum.create.foundation.fluid.FluidHelper;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.resource.conditions.v1.ResourceCondition;
+import net.fabricmc.fabric.api.resource.conditions.v1.ResourceConditions;
+import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.core.Holder;
+import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Style;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.RegistryOps;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.packs.resources.Resource;
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.tags.TagKey;
 import net.minecraft.util.ExtraCodecs;
-import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.level.material.Fluid;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.common.conditions.ModLoadedCondition;
-import net.neoforged.neoforge.registries.datamaps.DataMapType;
-import net.neoforged.neoforge.registries.datamaps.RegisterDataMapTypesEvent;
-import plus.dragons.createdragonsplus.common.registry.CDPFluids;
-import plus.dragons.createdragonsplus.util.Pairs;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import plus.dragons.createenchantmentindustry.common.CEICommon;
+import plus.dragons.createenchantmentindustry.common.datamap.CEIDataMapType;
 import plus.dragons.createenchantmentindustry.common.fluids.experience.ExperienceFuel;
+import plus.dragons.createenchantmentindustry.common.network.CEINetwork;
 import plus.dragons.createenchantmentindustry.common.processing.EnchantmentProcessingRule;
-import plus.dragons.createenchantmentindustry.util.CEIDyeFluids;
+import plus.dragons.createenchantmentindustry.util.CEIFluidUnits;
 import plus.dragons.createenchantmentindustry.util.CEIIntIntPair;
 
-public class CEIDataMaps {
-    public static final DataMapType<Item, ExperienceFuel> EXPERIENCE_FUEL = DataMapType
-            .builder(CEICommon.asResource("experience_fuel"), Registries.ITEM, ExperienceFuel.CODEC)
-            .synced(ExperienceFuel.FULL_CODEC, true)
-            .build();
-    public static final DataMapType<Fluid, Integer> FLUID_UNIT_EXPERIENCE = DataMapType
-            .builder(CEICommon.asResource("unit/experience"), Registries.FLUID, ExtraCodecs.POSITIVE_INT)
-            .synced(Codec.INT, true)
-            .build();
-    public static final DataMapType<Fluid, Integer> PRINTING_ADDRESS_INGREDIENT = DataMapType
-            .builder(CEICommon.asResource("printing/address/ingredient"), Registries.FLUID, ExtraCodecs.POSITIVE_INT)
-            .synced(Codec.INT, true)
-            .build();
-    public static final DataMapType<Fluid, Integer> PRINTING_PATTERN_INGREDIENT = DataMapType
-            .builder(CEICommon.asResource("printing/pattern/ingredient"), Registries.FLUID, ExtraCodecs.POSITIVE_INT)
-            .synced(Codec.INT, true)
-            .build();
-    public static final DataMapType<Fluid, Integer> PRINTING_COPY_INGREDIENT = DataMapType
-            .builder(CEICommon.asResource("printing/copy/ingredient"), Registries.FLUID, ExtraCodecs.POSITIVE_INT)
-            .synced(Codec.INT, true)
-            .build();
-    public static final DataMapType<Fluid, Integer> PRINTING_CUSTOM_NAME_INGREDIENT = DataMapType
-            .builder(CEICommon.asResource("printing/custom_name/ingredient"), Registries.FLUID, ExtraCodecs.POSITIVE_INT)
-            .synced(Codec.INT, true)
-            .build();
-    public static final DataMapType<Fluid, Style> PRINTING_CUSTOM_NAME_STYLE = DataMapType
-            .builder(CEICommon.asResource("printing/custom_name/style"), Registries.FLUID, Style.Serializer.CODEC)
-            .synced(Style.Serializer.CODEC, true)
-            .build();
-    public static final DataMapType<Fluid, Integer> PRINTING_WRITTEN_BOOK_INGREDIENT = DataMapType
-            .builder(CEICommon.asResource("printing/written_book/ingredient"), Registries.FLUID, ExtraCodecs.POSITIVE_INT)
-            .synced(Codec.INT, true)
-            .build();
-    public static final DataMapType<Fluid, Integer> PRINTING_BANNER_PATTERN_INGREDIENT = DataMapType
-            .builder(CEICommon.asResource("printing/banner_pattern/ingredient"), Registries.FLUID, ExtraCodecs.POSITIVE_INT)
-            .synced(Codec.INT, true)
-            .build();
-    public static final DataMapType<Enchantment, List<CEIIntIntPair>> PRINTING_ENCHANTED_BOOK_COST = DataMapType
-            .builder(CEICommon.asResource("printing/enchanted_book/custom_cost"), Registries.ENCHANTMENT, Codec.list(CEIIntIntPair.CODEC))
-            .synced(Codec.list(CEIIntIntPair.CODEC), true)
-            .build();
-    public static final DataMapType<Enchantment, Float> FORGING_COST_MULTIPLIER = DataMapType
-            .builder(CEICommon.asResource("forging/cost_multiplier"), Registries.ENCHANTMENT, ExtraCodecs.POSITIVE_FLOAT)
-            .synced(ExtraCodecs.POSITIVE_FLOAT, true)
-            .build();
-    public static final DataMapType<Enchantment, Float> SPLITTING_COST_MULTIPLIER = DataMapType
-            .builder(CEICommon.asResource("forging/split_enchantment_cost_multiplier"), Registries.ENCHANTMENT, ExtraCodecs.POSITIVE_FLOAT)
-            .synced(ExtraCodecs.POSITIVE_FLOAT, true)
-            .build();
-    public static final DataMapType<Enchantment, Integer> SUPER_ENCHANTING_LEVEL_EXTENSION = DataMapType
-            .builder(CEICommon.asResource("super_enchanting/custom_level_extension"), Registries.ENCHANTMENT, ExtraCodecs.NON_NEGATIVE_INT)
-            .synced(Codec.INT, true)
-            .build();
-    public static final DataMapType<Enchantment, EnchantmentProcessingRule> ENCHANTMENT_PROCESSING_RULES = DataMapType
-            .builder(CEICommon.asResource("enchantment_processing/rules"), Registries.ENCHANTMENT, EnchantmentProcessingRule.CODEC)
-            .synced(EnchantmentProcessingRule.CODEC, true)
-            .build();
+/** Resource-pack driven CEI data-map service for Fabric 1.21.11. */
+public final class CEIDataMaps {
+    private static final Logger LOGGER = LoggerFactory.getLogger(CEIDataMaps.class);
+    private static final Gson GSON = new Gson();
 
-    public static void register(IEventBus modBus) {
-        modBus.register(CEIDataMaps.class);
-        REGISTRATE.addDataGenerator(ProviderType.DATA_MAP, CEIDataMaps::generate);
+    public static final CEIDataMapType<Item, ExperienceFuel> EXPERIENCE_FUEL = type(
+            "experience_fuel", BuiltInRegistries.ITEM, ExperienceFuel.CODEC);
+    public static final CEIDataMapType<Fluid, Integer> FLUID_UNIT_EXPERIENCE = type(
+            "unit/experience", BuiltInRegistries.FLUID, ExtraCodecs.POSITIVE_INT);
+    public static final CEIDataMapType<Fluid, Integer> PRINTING_ADDRESS_INGREDIENT = type(
+            "printing/address/ingredient", BuiltInRegistries.FLUID, ExtraCodecs.POSITIVE_INT);
+    public static final CEIDataMapType<Fluid, Integer> PRINTING_PATTERN_INGREDIENT = type(
+            "printing/pattern/ingredient", BuiltInRegistries.FLUID, ExtraCodecs.POSITIVE_INT);
+    public static final CEIDataMapType<Fluid, Integer> PRINTING_COPY_INGREDIENT = type(
+            "printing/copy/ingredient", BuiltInRegistries.FLUID, ExtraCodecs.POSITIVE_INT);
+    public static final CEIDataMapType<Fluid, Integer> PRINTING_CUSTOM_NAME_INGREDIENT = type(
+            "printing/custom_name/ingredient", BuiltInRegistries.FLUID, ExtraCodecs.POSITIVE_INT);
+    public static final CEIDataMapType<Fluid, Style> PRINTING_CUSTOM_NAME_STYLE = type(
+            "printing/custom_name/style", BuiltInRegistries.FLUID, Style.Serializer.CODEC);
+    public static final CEIDataMapType<Fluid, Integer> PRINTING_WRITTEN_BOOK_INGREDIENT = type(
+            "printing/written_book/ingredient", BuiltInRegistries.FLUID, ExtraCodecs.POSITIVE_INT);
+    public static final CEIDataMapType<Fluid, Integer> PRINTING_BANNER_PATTERN_INGREDIENT = type(
+            "printing/banner_pattern/ingredient", BuiltInRegistries.FLUID, ExtraCodecs.POSITIVE_INT);
+    public static final CEIDataMapType<Enchantment, List<CEIIntIntPair>> PRINTING_ENCHANTED_BOOK_COST = type(
+            "printing/enchanted_book/custom_cost", Registries.ENCHANTMENT, Codec.list(CEIIntIntPair.CODEC));
+    public static final CEIDataMapType<Enchantment, Float> FORGING_COST_MULTIPLIER = type(
+            "forging/cost_multiplier", Registries.ENCHANTMENT, ExtraCodecs.POSITIVE_FLOAT);
+    public static final CEIDataMapType<Enchantment, Float> SPLITTING_COST_MULTIPLIER = type(
+            "forging/split_enchantment_cost_multiplier", Registries.ENCHANTMENT, ExtraCodecs.POSITIVE_FLOAT);
+    public static final CEIDataMapType<Enchantment, Integer> SUPER_ENCHANTING_LEVEL_EXTENSION = type(
+            "super_enchanting/custom_level_extension", Registries.ENCHANTMENT, ExtraCodecs.NON_NEGATIVE_INT);
+    public static final CEIDataMapType<Enchantment, EnchantmentProcessingRule> ENCHANTMENT_PROCESSING_RULES = type(
+            "enchantment_processing/rules", Registries.ENCHANTMENT, EnchantmentProcessingRule.CODEC);
+
+    private static final List<CEIDataMapType<?, ?>> TYPES = List.of(
+            EXPERIENCE_FUEL,
+            FLUID_UNIT_EXPERIENCE,
+            PRINTING_ADDRESS_INGREDIENT,
+            PRINTING_PATTERN_INGREDIENT,
+            PRINTING_COPY_INGREDIENT,
+            PRINTING_CUSTOM_NAME_INGREDIENT,
+            PRINTING_CUSTOM_NAME_STYLE,
+            PRINTING_WRITTEN_BOOK_INGREDIENT,
+            PRINTING_BANNER_PATTERN_INGREDIENT,
+            PRINTING_ENCHANTED_BOOK_COST,
+            FORGING_COST_MULTIPLIER,
+            SPLITTING_COST_MULTIPLIER,
+            SUPER_ENCHANTING_LEVEL_EXTENSION,
+            ENCHANTMENT_PROCESSING_RULES);
+    private static final Map<Identifier, CEIDataMapType<?, ?>> TYPES_BY_ID = indexTypes();
+    private static final AtomicReference<Snapshot> SERVER = new AtomicReference<>(Snapshot.empty());
+    private static final AtomicReference<Snapshot> CLIENT = new AtomicReference<>(Snapshot.empty());
+    private static final AtomicReference<MinecraftServer> ACTIVE_SERVER = new AtomicReference<>();
+
+    private CEIDataMaps() {}
+
+    /** Forces all map descriptors to be created from Create Fly's data-loader bootstrap hook. */
+    public static void bootstrapTypes() {
+        // Static initialization creates and indexes every descriptor before resource loading begins.
     }
 
-    @SubscribeEvent
-    public static void register(final RegisterDataMapTypesEvent event) {
-        event.register(EXPERIENCE_FUEL);
-        event.register(FLUID_UNIT_EXPERIENCE);
-        event.register(PRINTING_ADDRESS_INGREDIENT);
-        event.register(PRINTING_PATTERN_INGREDIENT);
-        event.register(PRINTING_COPY_INGREDIENT);
-        event.register(PRINTING_CUSTOM_NAME_INGREDIENT);
-        event.register(PRINTING_CUSTOM_NAME_STYLE);
-        event.register(PRINTING_WRITTEN_BOOK_INGREDIENT);
-        event.register(PRINTING_ENCHANTED_BOOK_COST);
-        event.register(PRINTING_BANNER_PATTERN_INGREDIENT);
-        event.register(FORGING_COST_MULTIPLIER);
-        event.register(SPLITTING_COST_MULTIPLIER);
-        event.register(SUPER_ENCHANTING_LEVEL_EXTENSION);
-        event.register(ENCHANTMENT_PROCESSING_RULES);
+    private static <K, V> CEIDataMapType<K, V> type(String path, Registry<K> registry, Codec<V> codec) {
+        return new CEIDataMapType<>(CEICommon.asResource(path), registry, codec);
     }
 
-    public static <T> Stream<Pair<Fluid, T>> getSourceFluidEntries(DataMapType<Fluid, T> type) {
-        return BuiltInRegistries.FLUID.getDataMap(type)
-                .entrySet()
-                .stream()
-                .map(Pairs.mapKey(BuiltInRegistries.FLUID::get))
-                .filter(Pairs.filterFirst(fluid -> FluidHelper.convertToStill(fluid) == fluid));
+    private static <K, V> CEIDataMapType<K, V> type(
+            String path,
+            ResourceKey<? extends Registry<K>> registry,
+            Codec<V> codec) {
+        return new CEIDataMapType<>(CEICommon.asResource(path), registry, codec);
     }
 
-    public static void generate(RegistrateDataMapProvider provider) {
-        provider.builder(EXPERIENCE_FUEL)
-                .add(CEIItems.EXPERIENCE_BUCKET, ExperienceFuel.normal(1000, Items.BUCKET.getDefaultInstance()), false) // Workaround solution, See https://github.com/Creators-of-Create/Create/pull/8304
-                .add(CEIItems.EXPERIENCE_CAKE, ExperienceFuel.special(1000), false)
-                .add(CEIItems.EXPERIENCE_CAKE_SLICE, ExperienceFuel.special(250), false)
-                .add(CEIBlocks.SUPER_EXPERIENCE_BLOCK.getId(), ExperienceFuel.special(27), false)
-                .add(CEIItems.SUPER_EXPERIENCE_NUGGET, ExperienceFuel.special(3), false)
-                .add(AllBlocks.EXPERIENCE_BLOCK.getId(), ExperienceFuel.normal(27), false)
-                .add(AllItems.EXP_NUGGET, ExperienceFuel.normal(3), false)
-                .add(ResourceLocation.fromNamespaceAndPath("create_sa", "heap_of_experience"),
-                        ExperienceFuel.normal(12), false,
-                        new ModLoadedCondition("create_sa"))
-                .add(ResourceLocation.fromNamespaceAndPath("ars_nouveau", "experience_gem"),
-                        ExperienceFuel.normal(3), false,
-                        new ModLoadedCondition("ars_nouveau"))
-                .add(ResourceLocation.fromNamespaceAndPath("ars_nouveau", "greater_experience_gem"),
-                        ExperienceFuel.normal(12), false,
-                        new ModLoadedCondition("ars_nouveau"))
-                .add(ResourceLocation.fromNamespaceAndPath("mysticalagriculture", "experience_droplet"),
-                        ExperienceFuel.normal(10), false,
-                        new ModLoadedCondition("mysticalagriculture"));
-        provider.builder(FLUID_UNIT_EXPERIENCE)
-                .add(ResourceLocation.fromNamespaceAndPath("cofh_core", "experience"),
-                        25, false,
-                        new ModLoadedCondition("cofh_core"))
-                .add(ResourceLocation.fromNamespaceAndPath("cyclic", "xpjuice"),
-                        20, false,
-                        new ModLoadedCondition("cyclic"))
-                .add(ResourceLocation.fromNamespaceAndPath("enderio", "xpjuice"),
-                        20, false,
-                        new ModLoadedCondition("enderio"))
-                .add(ResourceLocation.fromNamespaceAndPath("industrialforegoing", "essence"),
-                        20, false,
-                        new ModLoadedCondition("industrialforegoing"))
-                .add(ResourceLocation.fromNamespaceAndPath("mob_grinding_utils", "fluid_xp"),
-                        20, false,
-                        new ModLoadedCondition("mob_grinding_utils"))
-                .add(ResourceLocation.fromNamespaceAndPath("pneumaticcraft", "memory_essence"),
-                        20, false,
-                        new ModLoadedCondition("pneumaticcraft"))
-                .add(ResourceLocation.fromNamespaceAndPath("reliquary", "xp_juice_still"),
-                        20, false,
-                        new ModLoadedCondition("reliquary"))
-                .add(ResourceLocation.fromNamespaceAndPath("sophisticatedcore", "xp_still"),
-                        20, false,
-                        new ModLoadedCondition("sophisticatedcore"))
-                .add(ResourceLocation.fromNamespaceAndPath("justdirethings", "xp_fluid_source"),
-                        20, false,
-                        new ModLoadedCondition("justdirethings"));
-        var blackDye = CEIDyeFluids.tag(DyeColor.BLACK);
-        provider.builder(PRINTING_ADDRESS_INGREDIENT)
-                .add(blackDye, 10, false);
-        provider.builder(PRINTING_PATTERN_INGREDIENT)
-                .add(blackDye, 100, false);
-        provider.builder(PRINTING_COPY_INGREDIENT)
-                .add(blackDye, 10, false);
-        provider.builder(PRINTING_CUSTOM_NAME_INGREDIENT)
-                .add(CEIFluids.EXPERIENCE, 10, false)
-                .add(CDPFluids.COMMON_TAGS.dyes, 250, false);
-        provider.builder(PRINTING_WRITTEN_BOOK_INGREDIENT)
-                .add(blackDye, 10, false);
-        provider.builder(PRINTING_BANNER_PATTERN_INGREDIENT)
-                .add(CDPFluids.COMMON_TAGS.dyes, 100, false);
-        var customNameStyles = provider.builder(PRINTING_CUSTOM_NAME_STYLE);
-        for (var color : DyeColor.values()) {
-            if (color.getId() > DyeColor.BLACK.getId())
-                continue;
-            customNameStyles.add(CEIDyeFluids.tag(color), Style.EMPTY.withColor(color.getTextColor()), false);
+    private static Map<Identifier, CEIDataMapType<?, ?>> indexTypes() {
+        Map<Identifier, CEIDataMapType<?, ?>> result = new LinkedHashMap<>();
+        TYPES.forEach(type -> result.put(type.id(), type));
+        return Map.copyOf(result);
+    }
+
+    public static void register() {
+        CEINetwork.register();
+        ServerLifecycleEvents.SERVER_STARTING.register(ACTIVE_SERVER::set);
+        ServerLifecycleEvents.SERVER_STARTED.register(server -> SERVER.set(load(server.getResourceManager())));
+        ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resources, success) -> {
+            if (success) {
+                SERVER.set(load(resources));
+                server.getPlayerList().getPlayers().forEach(CEINetwork::sendStateSnapshot);
+            }
+        });
+        ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS.register((player, joined) -> {
+            if (joined) {
+                CEINetwork.sendStateSnapshot(player);
+            }
+        });
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
+            ACTIVE_SERVER.compareAndSet(server, null);
+            SERVER.set(Snapshot.empty());
+        });
+    }
+
+    public static void clearClientSnapshot() {
+        CLIENT.set(Snapshot.empty());
+    }
+
+    public static <K, V> V get(CEIDataMapType<K, V> type, K key) {
+        Identifier keyId = registry(type).getKey(key);
+        if (keyId == null) {
+            return null;
         }
-        provider.builder(PRINTING_ENCHANTED_BOOK_COST);
-        provider.builder(FORGING_COST_MULTIPLIER);
-        provider.builder(SPLITTING_COST_MULTIPLIER);
-        provider.builder(SUPER_ENCHANTING_LEVEL_EXTENSION);
-        provider.builder(ENCHANTMENT_PROCESSING_RULES)
-                .add(MENDING, EnchantmentProcessingRule.enchanterAndForgerExtension(0, 0), false)
-                .add(INFINITY, EnchantmentProcessingRule.enchanterAndForgerExtension(0, 0), false);
+        return current().get(type, keyId);
+    }
+
+    public static <K, V> V get(CEIDataMapType<K, V> type, Holder<K> holder) {
+        return holder.unwrapKey()
+                .map(ResourceKey::identifier)
+                .map(id -> current().get(type, id))
+                .orElse(null);
+    }
+
+    public static <K, V> Stream<Pair<K, V>> entries(CEIDataMapType<K, V> type) {
+        return current().entries(type);
+    }
+
+    public static <T> Stream<Pair<Fluid, T>> getSourceFluidEntries(CEIDataMapType<Fluid, T> type) {
+        return entries(type).filter(pair -> FluidHelper.convertToStill(pair.getFirst()) == pair.getFirst());
+    }
+
+    /** Converts legacy mB data-map values before exposing them to Fabric fluid consumers. */
+    public static Stream<Pair<Fluid, Long>> getSourceFluidAmountEntries(CEIDataMapType<Fluid, Integer> type) {
+        return getSourceFluidEntries(type)
+                .map(pair -> Pair.of(pair.getFirst(), CEIFluidUnits.millibuckets(pair.getSecond())));
+    }
+
+    private static Snapshot current() {
+        MinecraftServer server = ACTIVE_SERVER.get();
+        boolean serverThread = server != null && server.isSameThread();
+        return (FabricLoader.getInstance().getEnvironmentType() == EnvType.SERVER || serverThread)
+                ? SERVER.get()
+                : CLIENT.get();
+    }
+
+    public static Map<Identifier, Map<Identifier, JsonElement>> serializeServerSnapshot() {
+        return SERVER.get().serialize();
+    }
+
+    public static void applyClientSnapshot(Map<Identifier, Map<Identifier, JsonElement>> serialized) {
+        try {
+            CLIENT.set(decodeSnapshot(serialized));
+        } catch (RuntimeException exception) {
+            LOGGER.error("Rejected invalid CEI data-map snapshot from server; keeping the previous client snapshot", exception);
+        }
+    }
+
+    private static Snapshot decodeSnapshot(Map<Identifier, Map<Identifier, JsonElement>> serialized) {
+        Map<Identifier, Map<Identifier, Object>> result = new LinkedHashMap<>();
+        serialized.forEach((typeId, entries) -> {
+            CEIDataMapType<?, ?> type = TYPES_BY_ID.get(typeId);
+            if (type == null) {
+                throw new IllegalArgumentException("Unknown CEI data-map type " + typeId);
+            }
+            Map<Identifier, Object> decoded = new LinkedHashMap<>();
+            entries.forEach((key, value) -> decoded.put(key, decode(type, value, "network snapshot")));
+            result.put(typeId, Map.copyOf(decoded));
+        });
+        TYPES.forEach(type -> result.putIfAbsent(type.id(), Map.of()));
+        return new Snapshot(Map.copyOf(result));
+    }
+
+    private static Snapshot load(ResourceManager resourceManager) {
+        Map<Identifier, Map<Identifier, Object>> loaded = new LinkedHashMap<>();
+        for (CEIDataMapType<?, ?> type : TYPES) {
+            Map<Identifier, Object> entries = new LinkedHashMap<>();
+            List<Resource> resources = resourceManager.getResourceStack(type.resource());
+            for (Resource resource : resources) {
+                applyResource(type, entries, resource);
+            }
+            loaded.put(type.id(), Map.copyOf(entries));
+        }
+        Snapshot snapshot = new Snapshot(Map.copyOf(loaded));
+        LOGGER.info("Loaded {} CEI data-map entries from {} map types", snapshot.size(), TYPES.size());
+        return snapshot;
+    }
+
+    private static void applyResource(
+            CEIDataMapType<?, ?> type,
+            Map<Identifier, Object> entries,
+            Resource resource) {
+        String source = type.resource() + " from pack " + resource.sourcePackId();
+        JsonObject root;
+        try (BufferedReader reader = resource.openAsReader()) {
+            JsonElement parsed = JsonParser.parseReader(reader);
+            if (!parsed.isJsonObject()) {
+                throw new IllegalArgumentException(source + " must contain a JSON object");
+            }
+            root = parsed.getAsJsonObject();
+        } catch (IOException exception) {
+            throw new IllegalStateException("Failed to read " + source, exception);
+        }
+
+        applyJsonResource(type, entries, root, source);
+    }
+
+    static void applyJsonResource(
+            CEIDataMapType<?, ?> type,
+            Map<Identifier, Object> entries,
+            JsonObject root,
+            String source) {
+        if (root.has("replace") && root.get("replace").getAsBoolean()) {
+            entries.clear();
+        }
+        if (root.has("values")) {
+            if (!root.get("values").isJsonObject()) {
+                throw new IllegalArgumentException(source + " member 'values' must be an object");
+            }
+            JsonObject values = root.getAsJsonObject("values");
+            for (Map.Entry<String, JsonElement> entry : values.entrySet()) {
+                JsonElement wrapped = entry.getValue();
+                if (!conditionsPass(wrapped, source + " value " + entry.getKey())) {
+                    continue;
+                }
+                JsonElement value = unwrapValue(wrapped);
+                Object decoded = decode(type, value, source + " value " + entry.getKey());
+                resolve(type, entry.getKey(), true, source).forEach(key -> entries.put(key, decoded));
+            }
+        }
+        if (root.has("remove")) {
+            if (!root.get("remove").isJsonArray()) {
+                throw new IllegalArgumentException(source + " member 'remove' must be an array");
+            }
+            JsonArray removals = root.getAsJsonArray("remove");
+            for (JsonElement removal : removals) {
+                if (!removal.isJsonPrimitive() || !removal.getAsJsonPrimitive().isString()) {
+                    throw new IllegalArgumentException(source + " contains a non-string remove entry");
+                }
+                resolve(type, removal.getAsString(), false, source).forEach(entries::remove);
+            }
+        }
+    }
+
+    private static JsonElement unwrapValue(JsonElement element) {
+        if (!element.isJsonObject()) {
+            return element;
+        }
+        JsonObject object = element.getAsJsonObject();
+        if (object.has("neoforge:value")) {
+            return object.get("neoforge:value");
+        }
+        if (object.has("forge:value")) {
+            return object.get("forge:value");
+        }
+        if (object.has("value") && object.has("replace")) {
+            return object.get("value");
+        }
+        return element;
+    }
+
+    private static boolean conditionsPass(JsonElement element, String source) {
+        if (!element.isJsonObject()) {
+            return true;
+        }
+        JsonObject object = element.getAsJsonObject();
+        if (object.has(ResourceConditions.CONDITIONS_KEY)) {
+            ResourceCondition condition = ResourceCondition.CONDITION_CODEC
+                    .parse(JsonOps.INSTANCE, object.get(ResourceConditions.CONDITIONS_KEY))
+                    .getOrThrow(message -> new IllegalArgumentException(
+                            "Failed to decode Fabric conditions for " + source + ": " + message));
+            if (!condition.test(CEIDataMaps::lookupRegistryInfo)) {
+                return false;
+            }
+        }
+        JsonElement conditions = firstPresent(
+                object,
+                "forge:conditions",
+                "neoforge:conditions",
+                "conditions");
+        if (conditions == null) {
+            return true;
+        }
+        if (!conditions.isJsonArray()) {
+            throw new IllegalArgumentException(source + " conditions must be an array");
+        }
+        for (JsonElement condition : conditions.getAsJsonArray()) {
+            if (!condition.isJsonObject() || !evaluateCondition(condition.getAsJsonObject(), source)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static JsonElement firstPresent(JsonObject object, String... names) {
+        for (String name : names) {
+            if (object.has(name)) {
+                return object.get(name);
+            }
+        }
+        return null;
+    }
+
+    private static boolean evaluateCondition(JsonObject condition, String source) {
+        JsonElement typeElement = firstPresent(condition, "type", "condition");
+        if (typeElement == null)
+            throw new IllegalArgumentException(source + " condition is missing type");
+        String type = typeElement.getAsString();
+        return switch (type) {
+            case "forge:mod_loaded", "neoforge:mod_loaded" -> {
+                if (!condition.has("modid")) {
+                    throw new IllegalArgumentException(source + " mod_loaded condition is missing modid");
+                }
+                yield FabricLoader.getInstance().isModLoaded(condition.get("modid").getAsString());
+            }
+            case "forge:all_mods_loaded", "neoforge:all_mods_loaded" -> {
+                JsonElement values = firstPresent(condition, "values", "modids", "mods");
+                if (values == null || !values.isJsonArray())
+                    throw new IllegalArgumentException(source + " all_mods_loaded condition requires an array");
+                boolean loaded = true;
+                for (JsonElement mod : values.getAsJsonArray()) {
+                    if (!mod.isJsonPrimitive() || !mod.getAsJsonPrimitive().isString())
+                        throw new IllegalArgumentException(source + " all_mods_loaded contains a non-string mod id");
+                    loaded &= FabricLoader.getInstance().isModLoaded(mod.getAsString());
+                }
+                yield loaded;
+            }
+            case "forge:not", "neoforge:not" -> {
+                JsonElement child = firstPresent(condition, "value", "condition");
+                if (child == null || !child.isJsonObject()) {
+                    throw new IllegalArgumentException(source + " not condition requires an object value");
+                }
+                yield !evaluateCondition(child.getAsJsonObject(), source);
+            }
+            default -> throw new IllegalArgumentException(source + " uses unsupported condition " + type);
+        };
+    }
+
+    private static List<Identifier> resolve(
+            CEIDataMapType<?, ?> type,
+            String rawKey,
+            boolean required,
+            String source) {
+        boolean tag = rawKey.startsWith("#");
+        Identifier id = Identifier.tryParse(tag ? rawKey.substring(1) : rawKey);
+        if (id == null) {
+            throw new IllegalArgumentException(source + " contains invalid registry id " + rawKey);
+        }
+        if (tag) {
+            return resolveTag(type, id);
+        }
+        Registry<?> registry = registry(type);
+        if (!registry.containsKey(id)) {
+            if (required) {
+                throw new IllegalArgumentException(
+                        source + " references missing " + type.registryKey().identifier() + " " + id);
+            }
+            return List.of();
+        }
+        return List.of(id);
+    }
+
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    private static List<Identifier> resolveTag(CEIDataMapType<?, ?> type, Identifier id) {
+        Registry registry = registry(type);
+        TagKey tag = TagKey.create(registry.key(), id);
+        List<Identifier> values = new ArrayList<>();
+        registry.getTagOrEmpty(tag).forEach(holderObject -> {
+            net.minecraft.core.Holder<?> holder = (net.minecraft.core.Holder<?>) holderObject;
+            Identifier key = registry.getKey(holder.value());
+            if (key != null) {
+                values.add(key);
+            }
+        });
+        return values;
+    }
+
+    private static Object decode(CEIDataMapType<?, ?> type, JsonElement value, String source) {
+        return type.codec().parse(JsonOps.INSTANCE, value).getOrThrow(
+                message -> new IllegalArgumentException("Failed to decode " + source + ": " + message));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <K> Registry<K> registry(CEIDataMapType<K, ?> type) {
+        if (type.staticRegistry() != null) {
+            return type.staticRegistry();
+        }
+        MinecraftServer server = ACTIVE_SERVER.get();
+        if (server == null) {
+            throw new IllegalStateException("Dynamic registry " + type.registryKey().identifier() + " is unavailable");
+        }
+        return server.registryAccess().lookupOrThrow(type.registryKey());
+    }
+
+    private static <T> java.util.Optional<RegistryOps.RegistryInfo<T>> lookupRegistryInfo(
+            ResourceKey<? extends Registry<? extends T>> key) {
+        MinecraftServer server = ACTIVE_SERVER.get();
+        if (server == null) {
+            return java.util.Optional.empty();
+        }
+        return server.registryAccess()
+                .lookup(key)
+                .map(RegistryOps.RegistryInfo::fromRegistryLookup);
+    }
+
+    private record Snapshot(Map<Identifier, Map<Identifier, Object>> values) {
+        static Snapshot empty() {
+            Map<Identifier, Map<Identifier, Object>> empty = new LinkedHashMap<>();
+            TYPES.forEach(type -> empty.put(type.id(), Map.of()));
+            return new Snapshot(Map.copyOf(empty));
+        }
+
+        int size() {
+            return values.values().stream().mapToInt(Map::size).sum();
+        }
+
+        @SuppressWarnings("unchecked")
+        <K, V> V get(CEIDataMapType<K, V> type, Identifier key) {
+            return (V) values.getOrDefault(type.id(), Map.of()).get(key);
+        }
+
+        @SuppressWarnings("unchecked")
+        <K, V> Stream<Pair<K, V>> entries(CEIDataMapType<K, V> type) {
+            Registry<K> registry = registry(type);
+            return values.getOrDefault(type.id(), Map.of()).entrySet().stream()
+                    .map(entry -> Pair.of(registry.getValue(entry.getKey()), (V) entry.getValue()))
+                    .filter(pair -> pair.getFirst() != null);
+        }
+
+        Map<Identifier, Map<Identifier, JsonElement>> serialize() {
+            Map<Identifier, Map<Identifier, JsonElement>> result = new LinkedHashMap<>();
+            for (CEIDataMapType<?, ?> type : TYPES) {
+                Map<Identifier, JsonElement> entries = new LinkedHashMap<>();
+                values.getOrDefault(type.id(), Map.of()).forEach((key, value) -> entries.put(
+                        key,
+                        encode(type, value)));
+                result.put(type.id(), Map.copyOf(entries));
+            }
+            return Map.copyOf(result);
+        }
+
+        @SuppressWarnings("unchecked")
+        private static JsonElement encode(CEIDataMapType<?, ?> type, Object value) {
+            Codec<Object> codec = (Codec<Object>) type.codec();
+            return codec.encodeStart(JsonOps.INSTANCE, value).getOrThrow(
+                    message -> new IllegalStateException(
+                            "Failed to encode data map " + type.id() + ": " + message));
+        }
     }
 }

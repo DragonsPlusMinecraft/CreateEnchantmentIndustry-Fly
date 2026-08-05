@@ -20,7 +20,8 @@ package plus.dragons.createenchantmentindustry.common.processing.enchanter.behav
 
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.core.HolderSet;
+import java.util.stream.Stream;
+import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.tags.EnchantmentTags;
 import net.minecraft.tags.TagKey;
@@ -33,6 +34,7 @@ import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.EnchantmentInstance;
 import net.minecraft.world.level.Level;
 import plus.dragons.createenchantmentindustry.common.fluids.experience.ExperienceHelper;
+import plus.dragons.createenchantmentindustry.common.item.CEIItemData;
 import plus.dragons.createenchantmentindustry.common.processing.EnchantmentProcessingRules;
 import plus.dragons.createenchantmentindustry.common.processing.enchanter.CEIEnchantmentHelper;
 import plus.dragons.createenchantmentindustry.common.processing.enchanter.EnchantingTemplateItem;
@@ -51,11 +53,14 @@ public class EnchantingBehaviour {
         int adjustedLevel = CEIEnchantmentHelper.getAdjustedLevel(stack, enchantingLevel);
         if (adjustedLevel == 0)
             return new ArrayList<>(0);
-        var possible = level.registryAccess().registryOrThrow(Registries.ENCHANTMENT)
-                .getTag(enchantmentTag)
-                .stream()
-                .flatMap(HolderSet::stream)
-                .filter(stack::isPrimaryItemFor);
+        var registry = level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT);
+        var tagged = registry.get(enchantmentTag);
+        Stream<Holder<Enchantment>> holders = tagged.isPresent()
+                ? tagged.get().stream()
+                : registry.listElements().map(holder -> holder);
+        Stream<Holder<Enchantment>> possible = holders
+                .filter(holder -> !special || !holder.is(CEIEnchantments.MOD_TAGS.enchantingExclusive))
+                .filter(enchantment -> CEIEnchantmentHelper.canApplyAtEnchantingTable(enchantment, stack));
         return CEIEnchantmentHelper.getAvailableEnchantmentResults(adjustedLevel, possible, special);
     }
 
@@ -64,13 +69,15 @@ public class EnchantingBehaviour {
             return new ArrayList<>(0);
         if (CEIConfig.enchantments().blazeEnchanterBlockedLightningCurseCount.get() <= 0)
             return new ArrayList<>(0);
-        var possible = level.registryAccess().registryOrThrow(Registries.ENCHANTMENT)
-                .getTag(CEIEnchantments.MOD_TAGS.penaltyCurses)
-                .stream()
-                .flatMap(HolderSet::stream)
-                .filter(enchantment -> enchantment.is(EnchantmentTags.CURSE))
+        var registry = level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT);
+        var tagged = registry.get(CEIEnchantments.MOD_TAGS.penaltyCurses);
+        Stream<Holder<Enchantment>> holders = tagged.isPresent()
+                ? tagged.get().stream()
+                : registry.listElements().map(holder -> holder);
+        var possible = holders
                 .filter(enchantment -> !enchantment.is(CEIEnchantments.MOD_TAGS.penaltyCursesDeny))
-                .filter(enchantment -> stack.is(Items.BOOK) || stack.supportsEnchantment(enchantment));
+                .filter(enchantment -> enchantment.is(EnchantmentTags.CURSE))
+                .filter(enchantment -> CEIEnchantmentHelper.canApplyAtEnchantingTable(enchantment, stack));
         return CEIEnchantmentHelper.getAvailablePenaltyCurseResults(
                 possible,
                 CEIConfig.enchantments().blazeEnchanterBlockedLightningCurseMaxLevel.get());
@@ -102,8 +109,14 @@ public class EnchantingBehaviour {
     }
 
     public ItemStack getResult(Level level, ItemStack stack, RandomSource random, boolean special) {
-        var enchantments = selectResultEnchantments(random, stack, special);
-        return stack.getItem().applyEnchantments(stack, enchantments);
+        var selected = selectResultEnchantments(random, stack, special);
+        ItemStack result = stack.is(Items.BOOK)
+                ? CEIItemData.transmuteCopy(stack, Items.ENCHANTED_BOOK)
+                : stack.copy();
+        var enchantments = new java.util.LinkedHashMap<>(CEIItemData.getEnchantments(result));
+        selected.forEach(instance -> enchantments.merge(instance.enchantment(), instance.level(), Math::max));
+        CEIItemData.setEnchantments(result, enchantments);
+        return result;
     }
 
     protected List<EnchantmentInstance> selectResultEnchantments(RandomSource random, ItemStack stack, boolean special) {
@@ -135,20 +148,20 @@ public class EnchantingBehaviour {
             }
             if (available.isEmpty())
                 return;
-            WeightedRandom.getRandomItem(random, available)
+            WeightedRandom.getRandomItem(random, available, EnchantmentInstance::weight)
                     .ifPresent(enchantments::add);
         }
     }
 
     private void removeAlreadySelected(List<EnchantmentInstance> available, List<EnchantmentInstance> selected) {
         available.removeIf(instance -> selected.stream()
-                .anyMatch(enchantment -> enchantment.enchantment.equals(instance.enchantment)));
+                .anyMatch(enchantment -> enchantment.enchantment().equals(instance.enchantment())));
     }
 
     public int getExperienceCost() {
         if (enchantments.isEmpty())
             return 0;
-        int levelCost = Math.ceilDiv(enchantingLevel, 10);
+        int levelCost = (enchantingLevel + 9) / 10;
         int experienceCost = 0;
         for (int i = 0; i < levelCost; i++) {
             experienceCost += ExperienceHelper.getExperienceForNextLevel(enchantingLevel - i);
@@ -159,7 +172,7 @@ public class EnchantingBehaviour {
     public int getExperienceCost(boolean special, boolean template) {
         if (enchantments.isEmpty())
             return 0;
-        int levelCost = Math.ceilDiv(enchantingLevel, 10);
+        int levelCost = (enchantingLevel + 9) / 10;
         int experienceCost = 0;
         for (int i = 0; i < levelCost; i++) {
             experienceCost += ExperienceHelper.getExperienceForNextLevel(enchantingLevel - i);

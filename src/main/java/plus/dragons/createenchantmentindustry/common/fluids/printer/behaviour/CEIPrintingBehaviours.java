@@ -20,15 +20,15 @@ package plus.dragons.createenchantmentindustry.common.fluids.printer.behaviour;
 
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
-import net.neoforged.bus.api.IEventBus;
 import org.jetbrains.annotations.ApiStatus.Internal;
+import plus.dragons.createenchantmentindustry.common.CEICommon;
 import plus.dragons.createenchantmentindustry.config.CEIConfig;
 
 @Internal
 public final class CEIPrintingBehaviours {
     private CEIPrintingBehaviours() {}
 
-    public static void register(IEventBus modBus) {
+    public static void register() {
         register("package_address", enabled(
                 () -> CEIConfig.fluids().enablePackageAddressPrinting.get(),
                 AddressPrintingBehaviour::create));
@@ -50,12 +50,11 @@ public final class CEIPrintingBehaviours {
         register("banner_pattern", enabled(
                 () -> CEIConfig.fluids().enableBannerPatternPrinting.get(),
                 BannerPatternPrintingBehavior::create));
-        PrintingBehaviourRegistry.register(modBus);
     }
 
     private static void register(String name, PrintingBehaviour.Provider provider) {
-        PrintingBehaviourRegistry.registerBuiltin(name, () -> new PrintingBehaviourProvider(
-                PrintingBehaviourProvider.BUILTIN_PRIORITY, provider));
+        PrintingBehaviourRegistry.register(
+                CEICommon.asResource(name), PrintingBehaviourRegistry.BUILTIN_PRIORITY, provider);
     }
 
     private static PrintingBehaviour.Provider enabled(BooleanSupplier enabled, PrintingBehaviour.Provider provider) {

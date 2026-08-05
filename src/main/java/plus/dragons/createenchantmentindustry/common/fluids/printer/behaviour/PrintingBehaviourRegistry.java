@@ -19,63 +19,107 @@
 package plus.dragons.createenchantmentindustry.common.fluids.printer.behaviour;
 
 import com.mojang.serialization.DataResult;
-import com.simibubi.create.foundation.blockEntity.behaviour.fluid.SmartFluidTankBehaviour;
+import com.zurrtum.create.foundation.blockEntity.behaviour.fluid.SmartFluidTankBehaviour;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
-import java.util.function.Supplier;
-import net.minecraft.core.Registry;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredRegister;
-import plus.dragons.createenchantmentindustry.api.registry.CEIRegistries;
-import plus.dragons.createenchantmentindustry.common.CEICommon;
 
-/**
- * NeoForge registry and dispatcher for Printer behaviour providers.
- *
- * <p>Addons should register {@link PrintingBehaviourProvider} entries through a {@link DeferredRegister} created from
- * {@link CEIRegistries#PRINTING_BEHAVIOUR_PROVIDER}. Providers with a higher priority are queried first, while
- * providers with the same priority retain registry order. Recipe printing is always evaluated after every registered
- * provider.
- */
+/** Lifecycle-bound, deterministic registry for Printer behaviour providers. */
 public final class PrintingBehaviourRegistry {
-    private static final DeferredRegister<PrintingBehaviourProvider> PROVIDERS = DeferredRegister.create(CEIRegistries.PRINTING_BEHAVIOUR_PROVIDER, CEICommon.ID);
-    public static final Registry<PrintingBehaviourProvider> REGISTRY = PROVIDERS.makeRegistry(builder -> builder
-            .sync(false)
-            .onBake(PrintingBehaviourRegistry::bake));
-    private static volatile List<PrintingBehaviourProvider> sortedProviders;
+    public static final int DEFAULT_PRIORITY = 0;
+    public static final int BUILTIN_PRIORITY = 1000;
+    private static final Dispatcher DISPATCHER = new Dispatcher();
 
     private PrintingBehaviourRegistry() {}
 
-    static void registerBuiltin(String name, Supplier<PrintingBehaviourProvider> provider) {
-        PROVIDERS.register(name, provider);
+    public static void register(Identifier id, PrintingBehaviour.Provider provider) {
+        register(id, DEFAULT_PRIORITY, provider);
     }
 
-    static void register(IEventBus modBus) {
-        PROVIDERS.register(modBus);
+    public static void register(Identifier id, int priority, PrintingBehaviour.Provider provider) {
+        DISPATCHER.register(id, priority, provider);
     }
 
-    private static void bake(Registry<PrintingBehaviourProvider> registry) {
-        var providers = new ArrayList<PrintingBehaviourProvider>();
-        registry.forEach(providers::add);
-        providers.sort(Comparator.comparingInt(PrintingBehaviourProvider::priority).reversed());
-        sortedProviders = List.copyOf(providers);
+    /** Freezes provider order permanently. Called during the first server start. */
+    public static void freeze() {
+        DISPATCHER.freeze();
     }
 
-    static DataResult<PrintingBehaviour> create(Level level, SmartFluidTankBehaviour tank, ItemStack stack) {
-        var providers = sortedProviders;
-        if (providers == null)
-            throw new IllegalStateException("Printing behaviour registry has not finished registration");
-        for (var entry : providers) {
-            var result = Objects.requireNonNull(
-                    entry.provider().create(level, tank, stack),
-                    () -> "Printing behaviour provider " + REGISTRY.getKey(entry) + " returned null");
-            if (result.isPresent())
-                return result.get();
+    static DataResult<PrintingBehaviour> create(
+            Level level, SmartFluidTankBehaviour tank, ItemStack stack) {
+        return DISPATCHER.create(level, tank, stack);
+    }
+
+    /** Package-visible instance form keeps ordering/freeze semantics independently testable. */
+    static final class Dispatcher {
+        private static final Comparator<Entry> ORDER = Comparator
+                .comparingInt(Entry::priority)
+                .reversed()
+                .thenComparing(entry -> entry.id().toString());
+
+        private final Map<Identifier, Entry> entries = new HashMap<>();
+        private volatile List<Entry> ordered = List.of();
+        private boolean frozen;
+
+        synchronized void register(Identifier id, int priority, PrintingBehaviour.Provider provider) {
+            Objects.requireNonNull(id, "id");
+            Objects.requireNonNull(provider, "provider");
+            if (frozen) {
+                throw new IllegalStateException(
+                        "Printing behaviour registry is frozen; cannot register " + id);
+            }
+            Entry entry = new Entry(id, priority, provider);
+            if (entries.putIfAbsent(id, entry) != null) {
+                throw new IllegalArgumentException("Duplicate printing behaviour id " + id);
+            }
+            ordered = sortedEntries();
         }
-        return DataResult.success(new RecipePrintingBehaviour(stack));
+
+        synchronized void freeze() {
+            if (!frozen) {
+                ordered = sortedEntries();
+                frozen = true;
+            }
+        }
+
+        private List<Entry> sortedEntries() {
+            List<Entry> result = new ArrayList<>(entries.values());
+            result.sort(ORDER);
+            return List.copyOf(result);
+        }
+
+        DataResult<PrintingBehaviour> create(
+                Level level, SmartFluidTankBehaviour tank, ItemStack stack) {
+            for (Entry entry : ordered) {
+                var claimed = Objects.requireNonNull(
+                        entry.provider().create(level, tank, stack),
+                        () -> "Printing behaviour provider " + entry.id() + " returned null");
+                if (claimed.isPresent()) {
+                    return claimed.get();
+                }
+            }
+            return DataResult.success(new RecipePrintingBehaviour(stack));
+        }
+
+        List<Identifier> orderedIds() {
+            return ordered.stream().map(Entry::id).toList();
+        }
+
+        boolean frozen() {
+            return frozen;
+        }
+    }
+
+    private record Entry(Identifier id, int priority, PrintingBehaviour.Provider provider) {
+        private Entry {
+            Objects.requireNonNull(id, "id");
+            Objects.requireNonNull(provider, "provider");
+        }
     }
 }

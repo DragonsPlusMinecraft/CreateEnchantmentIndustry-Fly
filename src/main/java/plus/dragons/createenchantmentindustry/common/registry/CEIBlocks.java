@@ -18,171 +18,120 @@
 
 package plus.dragons.createenchantmentindustry.common.registry;
 
-import static com.simibubi.create.api.contraption.storage.fluid.MountedFluidStorageType.mountedFluidStorage;
-import static com.simibubi.create.foundation.data.ModelGen.customItemModel;
-import static com.simibubi.create.foundation.data.TagGen.pickaxeOnly;
-import static plus.dragons.createenchantmentindustry.common.CEICommon.REGISTRATE;
-
-import com.simibubi.create.AllBlocks;
-import com.simibubi.create.AllTags.AllBlockTags;
-import com.simibubi.create.Create;
-import com.simibubi.create.api.behaviour.movement.MovementBehaviour;
-import com.simibubi.create.content.materials.ExperienceBlock;
-import com.simibubi.create.content.processing.AssemblyOperatorBlockItem;
-import com.simibubi.create.foundation.data.AssetLookup;
-import com.simibubi.create.foundation.data.BlockStateGen;
-import com.simibubi.create.foundation.data.SharedProperties;
-import com.tterrag.registrate.util.entry.BlockEntry;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.tags.BlockTags;
-import net.minecraft.world.item.Rarity;
+import com.zurrtum.create.api.behaviour.movement.MovementBehaviour;
+import com.zurrtum.create.content.materials.ExperienceBlock;
+import com.zurrtum.create.infrastructure.fluids.FlowableFluid;
+import com.zurrtum.create.infrastructure.fluids.FluidBlock;
+import java.util.function.Function;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
-import net.minecraft.world.level.storage.loot.LootPool;
-import net.minecraft.world.level.storage.loot.LootTable;
-import net.minecraft.world.level.storage.loot.entries.LootItem;
-import net.minecraft.world.level.storage.loot.providers.number.ConstantValue;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.common.Tags;
-import net.neoforged.neoforge.common.util.DeferredSoundType;
 import plus.dragons.createdragonsplus.common.processing.blaze.BlazeBlock;
 import plus.dragons.createdragonsplus.common.processing.blaze.BlazeMovementBehaviour;
+import plus.dragons.createenchantmentindustry.common.CEICommon;
 import plus.dragons.createenchantmentindustry.common.fluids.experience.ExperienceHatchBlock;
 import plus.dragons.createenchantmentindustry.common.fluids.lantern.ExperienceLanternBlock;
 import plus.dragons.createenchantmentindustry.common.fluids.lantern.ExperienceLanternMovementBehaviour;
 import plus.dragons.createenchantmentindustry.common.fluids.printer.PrinterBlock;
 import plus.dragons.createenchantmentindustry.common.kinetics.grindstone.GrindstoneDrainBlock;
-import plus.dragons.createenchantmentindustry.common.kinetics.grindstone.MechanicalGrindStoneItem;
 import plus.dragons.createenchantmentindustry.common.kinetics.grindstone.MechanicalGrindstoneBlock;
 import plus.dragons.createenchantmentindustry.common.processing.classic_enchanter.ClassicBlazeEnchanterBlock;
 import plus.dragons.createenchantmentindustry.common.processing.enchanter.BlazeEnchanterBlock;
 import plus.dragons.createenchantmentindustry.common.processing.forger.BlazeForgerBlock;
 import plus.dragons.createenchantmentindustry.config.CEIConfig;
 
-@SuppressWarnings("removal")
-public class CEIBlocks {
-    public static final BlockEntry<MechanicalGrindstoneBlock> MECHANICAL_GRINDSTONE = REGISTRATE
-            .block("mechanical_grindstone", MechanicalGrindstoneBlock::new)
-            .initialProperties(SharedProperties::stone)
-            .transform(CEIConfig.stress().setImpact(4.0))
-            .transform(pickaxeOnly())
-            .blockstate(BlockStateGen.axisBlockProvider(false))
-            .item(MechanicalGrindStoneItem::new)
-            .build()
-            .register();
-    public static final BlockEntry<GrindstoneDrainBlock> GRINDSTONE_DRAIN = REGISTRATE
-            .block("grindstone_drain", prop -> new GrindstoneDrainBlock(MECHANICAL_GRINDSTONE.get(), prop))
-            .initialProperties(SharedProperties::copperMetal)
-            .transform(CEIConfig.stress().setImpact(4.0))
-            .transform(pickaxeOnly())
-            .blockstate(BlockStateGen.horizontalBlockProvider(true))
-            .item()
-            .transform(customItemModel())
-            .loot((loots, block) -> loots.add(block, LootTable.lootTable()
-                    .withPool(loots.applyExplosionCondition(MECHANICAL_GRINDSTONE, LootPool.lootPool()
-                            .setRolls(ConstantValue.exactly(1.0F))
-                            .add(LootItem.lootTableItem(MECHANICAL_GRINDSTONE))))
-                    .withPool(loots.applyExplosionCondition(AllBlocks.ITEM_DRAIN, LootPool.lootPool()
-                            .setRolls(ConstantValue.exactly(1.0F))
-                            .add(LootItem.lootTableItem(AllBlocks.ITEM_DRAIN))))))
-            .register();
-    public static final BlockEntry<ExperienceHatchBlock> EXPERIENCE_HATCH = REGISTRATE
-            .block("experience_hatch", ExperienceHatchBlock::new)
-            .initialProperties(SharedProperties::copperMetal)
-            .properties(p -> p.mapColor(MapColor.COLOR_GREEN).lightLevel(state -> 12))
-            .transform(pickaxeOnly())
-            .blockstate((ctx, prov) -> prov.horizontalBlock(ctx.get(), AssetLookup.standardModel(ctx, prov)))
-            .simpleItem()
-            .register();
-    public static final BlockEntry<PrinterBlock> PRINTER = REGISTRATE
-            .block("printer", PrinterBlock::new)
-            .initialProperties(SharedProperties::copperMetal)
-            .transform(pickaxeOnly())
-            .blockstate((ctx, prov) -> prov.horizontalBlock(ctx.getEntry(), AssetLookup.partialBaseModel(ctx, prov)))
-            .item(AssemblyOperatorBlockItem::new)
-            .transform(customItemModel())
-            .register();
-    public static final BlockEntry<BlazeEnchanterBlock> BLAZE_ENCHANTER = REGISTRATE
-            .block("blaze_enchanter", BlazeEnchanterBlock::new)
-            .initialProperties(SharedProperties::softMetal)
-            .properties(p -> p.mapColor(MapColor.COLOR_GRAY).lightLevel(BlazeBlock::getLight))
-            .transform(pickaxeOnly())
-            .addLayer(() -> RenderType::cutoutMipped)
-            .onRegister(block -> MovementBehaviour.REGISTRY.register(block, new BlazeMovementBehaviour()))
-            .tag(AllBlockTags.FAN_TRANSPARENT.tag, AllBlockTags.FAN_PROCESSING_CATALYSTS_SMOKING.tag)
-            .blockstate((ctx, prov) -> prov.horizontalBlock(
-                    ctx.getEntry(),
-                    prov.models().getExistingFile(Create.asResource("block/blaze_burner/block"))))
-            .item()
-            .model((ctx, prov) -> prov.withExistingParent(ctx.getName(),
-                    Create.asResource("block/blaze_burner/block_with_blaze")))
-            .build()
-            .register();
-    public static final BlockEntry<BlazeForgerBlock> BLAZE_FORGER = REGISTRATE
-            .block("blaze_forger", BlazeForgerBlock::new)
-            .initialProperties(SharedProperties::softMetal)
-            .properties(p -> p.mapColor(MapColor.COLOR_GRAY).lightLevel(BlazeBlock::getLight))
-            .transform(pickaxeOnly())
-            .addLayer(() -> RenderType::cutoutMipped)
-            .onRegister(block -> MovementBehaviour.REGISTRY.register(block, new BlazeMovementBehaviour()))
-            .tag(AllBlockTags.FAN_TRANSPARENT.tag, AllBlockTags.FAN_PROCESSING_CATALYSTS_SMOKING.tag)
-            .blockstate((ctx, prov) -> prov.horizontalBlock(
-                    ctx.getEntry(),
-                    prov.models().getExistingFile(Create.asResource("block/blaze_burner/block"))))
-            .item()
-            .model((ctx, prov) -> prov.withExistingParent(ctx.getName(),
-                    Create.asResource("block/blaze_burner/block_with_blaze")))
-            .build()
-            .register();
-    public static final BlockEntry<ClassicBlazeEnchanterBlock> CLASSIC_BLAZE_ENCHANTER = REGISTRATE
-            .block("classic_blaze_enchanter", ClassicBlazeEnchanterBlock::new)
-            .initialProperties(SharedProperties::softMetal)
-            .properties(p -> p.mapColor(MapColor.COLOR_GRAY).lightLevel(BlazeBlock::getLight))
-            .transform(pickaxeOnly())
-            .addLayer(() -> RenderType::cutoutMipped)
-            .onRegister(block -> MovementBehaviour.REGISTRY.register(block, new BlazeMovementBehaviour()))
-            .tag(AllBlockTags.FAN_TRANSPARENT.tag, AllBlockTags.FAN_PROCESSING_CATALYSTS_SMOKING.tag)
-            .blockstate((ctx, prov) -> prov.horizontalBlock(
-                    ctx.getEntry(),
-                    prov.models().getExistingFile(Create.asResource("block/blaze_burner/block"))))
-            .item()
-            .model((ctx, prov) -> prov.withExistingParent(ctx.getName(),
-                    Create.asResource("block/blaze_burner/block_with_blaze")))
-            .build()
-            .register();
-    public static final BlockEntry<ExperienceBlock> SUPER_EXPERIENCE_BLOCK = REGISTRATE
-            .block("super_experience_block", ExperienceBlock::new)
-            .initialProperties(SharedProperties::softMetal)
-            .properties(p -> p.mapColor(MapColor.DIAMOND)
-                    .sound(new DeferredSoundType(1, .5f, () -> SoundEvents.AMETHYST_BLOCK_BREAK,
-                            () -> SoundEvents.AMETHYST_BLOCK_STEP, () -> SoundEvents.AMETHYST_BLOCK_PLACE,
-                            () -> SoundEvents.AMETHYST_BLOCK_HIT, () -> SoundEvents.AMETHYST_BLOCK_FALL))
+/** Blocks are registered from {@link CEICreatePlugin#onBlockRegister()} during vanilla bootstrap. */
+public final class CEIBlocks {
+    public static final CEIRegistryEntry<FluidBlock> EXPERIENCE = register(
+            "experience",
+            properties -> new FluidBlock((FlowableFluid) CEIFluids.EXPERIENCE.getSource(), properties),
+            BlockBehaviour.Properties.ofFullCopy(Blocks.WATER)
+                    .mapColor(MapColor.COLOR_LIGHT_GREEN)
+                    .lightLevel(state -> 15));
+    public static final CEIRegistryEntry<MechanicalGrindstoneBlock> MECHANICAL_GRINDSTONE = register(
+            "mechanical_grindstone",
+            MechanicalGrindstoneBlock::new,
+            BlockBehaviour.Properties.ofFullCopy(Blocks.ANDESITE).requiresCorrectToolForDrops());
+    public static final CEIRegistryEntry<GrindstoneDrainBlock> GRINDSTONE_DRAIN = register(
+            "grindstone_drain",
+            properties -> new GrindstoneDrainBlock(MECHANICAL_GRINDSTONE.get(), properties),
+            BlockBehaviour.Properties.ofFullCopy(Blocks.COPPER_BLOCK).requiresCorrectToolForDrops());
+    public static final CEIRegistryEntry<ExperienceHatchBlock> EXPERIENCE_HATCH = register(
+            "experience_hatch",
+            ExperienceHatchBlock::new,
+            BlockBehaviour.Properties.ofFullCopy(Blocks.COPPER_BLOCK)
+                    .mapColor(MapColor.COLOR_GREEN)
                     .requiresCorrectToolForDrops()
-                    .lightLevel(state -> 15))
-            .blockstate((ctx, prov) -> prov.simpleBlock(ctx.get(), prov.models()
-                    .withExistingParent(ctx.getName(), Create.asResource("block/experience_block"))
-                    .texture("all", ctx.getId().withPrefix("block/"))
-                    .texture("particle", ctx.getId().withPrefix("block/"))))
-            .transform(pickaxeOnly())
-            .lang("Block of Super Experience")
-            .tag(Tags.Blocks.STORAGE_BLOCKS)
-            .tag(BlockTags.BEACON_BASE_BLOCKS)
-            .item()
-            .properties(p -> p.rarity(Rarity.RARE))
-            .tag(Tags.Items.STORAGE_BLOCKS)
-            .build()
-            .register();
-    public static final BlockEntry<ExperienceLanternBlock> EXPERIENCE_LANTERN = REGISTRATE
-            .block("experience_lantern", ExperienceLanternBlock::new)
-            .initialProperties(SharedProperties::softMetal)
-            .properties(p -> p.mapColor(MapColor.COLOR_LIGHT_GREEN))
-            .transform(pickaxeOnly())
-            .transform(mountedFluidStorage(CEIMountedStorageTypes.EXPERIENCE_LANTERN))
-            .onRegister(block -> MovementBehaviour.REGISTRY.register(block, new ExperienceLanternMovementBehaviour()))
-            .addLayer(() -> RenderType::cutoutMipped)
-            .blockstate((ctx, prov) -> prov.directionalBlock(ctx.get(), AssetLookup.standardModel(ctx, prov)))
-            .simpleItem()
-            .register();
+                    .lightLevel(state -> 12));
+    public static final CEIRegistryEntry<PrinterBlock> PRINTER = register(
+            "printer",
+            PrinterBlock::new,
+            BlockBehaviour.Properties.ofFullCopy(Blocks.COPPER_BLOCK).requiresCorrectToolForDrops());
+    public static final CEIRegistryEntry<BlazeEnchanterBlock> BLAZE_ENCHANTER = register(
+            "blaze_enchanter", BlazeEnchanterBlock::new, blazeProperties());
+    public static final CEIRegistryEntry<BlazeForgerBlock> BLAZE_FORGER = register(
+            "blaze_forger", BlazeForgerBlock::new, blazeProperties());
+    public static final CEIRegistryEntry<ClassicBlazeEnchanterBlock> CLASSIC_BLAZE_ENCHANTER = register(
+            "classic_blaze_enchanter", ClassicBlazeEnchanterBlock::new, blazeProperties());
+    public static final CEIRegistryEntry<ExperienceBlock> SUPER_EXPERIENCE_BLOCK = register(
+            "super_experience_block",
+            ExperienceBlock::new,
+            BlockBehaviour.Properties.ofFullCopy(Blocks.AMETHYST_BLOCK)
+                    .mapColor(MapColor.DIAMOND)
+                    .requiresCorrectToolForDrops()
+                    .lightLevel(state -> 15));
+    public static final CEIRegistryEntry<ExperienceLanternBlock> EXPERIENCE_LANTERN = register(
+            "experience_lantern",
+            ExperienceLanternBlock::new,
+            BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK)
+                    .mapColor(MapColor.COLOR_LIGHT_GREEN)
+                    .requiresCorrectToolForDrops()
+                    .lightLevel(state -> state.getValue(ExperienceLanternBlock.LIGHT)));
 
-    public static void register(IEventBus modBus) {}
+    public static final BlazeMovementBehaviour BLAZE_ENCHANTER_MOVEMENT = new BlazeMovementBehaviour();
+    public static final BlazeMovementBehaviour BLAZE_FORGER_MOVEMENT = new BlazeMovementBehaviour();
+    public static final BlazeMovementBehaviour CLASSIC_BLAZE_ENCHANTER_MOVEMENT = new BlazeMovementBehaviour();
+    public static final ExperienceLanternMovementBehaviour EXPERIENCE_LANTERN_MOVEMENT = new ExperienceLanternMovementBehaviour();
+
+    private static boolean initialized;
+
+    private CEIBlocks() {}
+
+    public static synchronized void register() {
+        if (initialized) {
+            return;
+        }
+        initialized = true;
+
+        CEIFluids.attachBlock(EXPERIENCE.get());
+
+        CEIConfig.stress().setImpact(MECHANICAL_GRINDSTONE.getId(), 4.0);
+        CEIConfig.stress().setImpact(GRINDSTONE_DRAIN.getId(), 4.0);
+
+        MovementBehaviour.REGISTRY.register(BLAZE_ENCHANTER.get(), BLAZE_ENCHANTER_MOVEMENT);
+        MovementBehaviour.REGISTRY.register(BLAZE_FORGER.get(), BLAZE_FORGER_MOVEMENT);
+        MovementBehaviour.REGISTRY.register(CLASSIC_BLAZE_ENCHANTER.get(), CLASSIC_BLAZE_ENCHANTER_MOVEMENT);
+        MovementBehaviour.REGISTRY.register(EXPERIENCE_LANTERN.get(), EXPERIENCE_LANTERN_MOVEMENT);
+    }
+
+    private static BlockBehaviour.Properties blazeProperties() {
+        return BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK)
+                .mapColor(MapColor.COLOR_GRAY)
+                .requiresCorrectToolForDrops()
+                .lightLevel(BlazeBlock::getLight);
+    }
+
+    private static <T extends Block> CEIRegistryEntry<T> register(
+            String path, Function<BlockBehaviour.Properties, T> factory, BlockBehaviour.Properties properties) {
+        Identifier id = CEICommon.asResource(path);
+        ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, id);
+        T block = Registry.register(BuiltInRegistries.BLOCK, key, factory.apply(properties.setId(key)));
+        return new CEIRegistryEntry<>(id, block);
+    }
 }

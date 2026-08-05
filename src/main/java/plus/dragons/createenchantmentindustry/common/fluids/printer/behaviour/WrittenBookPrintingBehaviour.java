@@ -19,8 +19,8 @@
 package plus.dragons.createenchantmentindustry.common.fluids.printer.behaviour;
 
 import com.mojang.serialization.DataResult;
-import com.simibubi.create.foundation.blockEntity.behaviour.fluid.SmartFluidTankBehaviour;
-import com.simibubi.create.foundation.utility.CreateLang;
+import com.zurrtum.create.foundation.blockEntity.behaviour.fluid.SmartFluidTankBehaviour;
+import com.zurrtum.create.infrastructure.fluids.FluidStack;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -33,11 +33,12 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.WrittenBookContent;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.fluids.FluidStack;
 import plus.dragons.createenchantmentindustry.common.CEICommon;
 import plus.dragons.createenchantmentindustry.common.fluids.printer.PrinterBlockEntity;
+import plus.dragons.createenchantmentindustry.common.item.CEIItemData;
 import plus.dragons.createenchantmentindustry.common.registry.CEIDataMaps;
 import plus.dragons.createenchantmentindustry.config.CEIConfig;
+import plus.dragons.createenchantmentindustry.util.CEIFluidUnits;
 import plus.dragons.createenchantmentindustry.util.CEILang;
 
 public class WrittenBookPrintingBehaviour implements PrintingBehaviour {
@@ -52,26 +53,21 @@ public class WrittenBookPrintingBehaviour implements PrintingBehaviour {
     public static Optional<DataResult<PrintingBehaviour>> create(Level level, SmartFluidTankBehaviour tank, ItemStack stack) {
         if (!stack.is(Items.WRITTEN_BOOK))
             return Optional.empty();
-        var content = stack.get(DataComponents.WRITTEN_BOOK_CONTENT);
-        if (content == null || content.pages().isEmpty())
+        WrittenBookContent book = stack.get(DataComponents.WRITTEN_BOOK_CONTENT);
+        if (book == null || book.pages().isEmpty())
             return Optional.of(DataResult.error(() -> CEICommon.asLocalization("gui.printer.written_book.invalid")));
-        int generation = content.generation();
         int change = CEIConfig.fluids().printingGenerationChange.get();
-        int newGeneration = Math.max(0, generation + change);
+        int newGeneration = Math.max(0, book.generation() + change);
         if (newGeneration > 2)
             return Optional.of(DataResult.error(() -> CEICommon.asLocalization("gui.printer.written_book.invalid")));
-        content = new WrittenBookContent(
-                content.title(),
-                content.author(),
-                newGeneration,
-                content.pages(),
-                content.resolved());
+        WrittenBookContent content = new WrittenBookContent(
+                book.title(), book.author(), newGeneration, book.pages(), book.resolved());
         return Optional.of(DataResult.success(new WrittenBookPrintingBehaviour(tank, content)));
     }
 
     private OptionalInt getCost(FluidStack fluid) {
         int cost = this.content.pages().size();
-        cost *= Objects.requireNonNullElse(fluid.getFluidHolder().getData(CEIDataMaps.PRINTING_WRITTEN_BOOK_INGREDIENT), 0);
+        cost *= Objects.requireNonNullElse(CEIDataMaps.PRINTING_WRITTEN_BOOK_INGREDIENT.get(fluid.getFluid()), 0);
         if (cost == 0)
             return OptionalInt.empty();
         return OptionalInt.of(cost);
@@ -100,12 +96,13 @@ public class WrittenBookPrintingBehaviour implements PrintingBehaviour {
 
     @Override
     public int getRequiredFluidAmount(Level level, ItemStack stack, FluidStack fluidStack) {
-        return getCost(fluidStack).orElse(0);
+        return Math.toIntExact(CEIFluidUnits.millibuckets(getCost(fluidStack).orElse(0)));
     }
 
     @Override
     public ItemStack getResult(Level level, ItemStack stack, FluidStack fluidStack) {
-        var result = stack.transmuteCopy(Items.WRITTEN_BOOK, 1);
+        var result = CEIItemData.transmuteCopy(stack, Items.WRITTEN_BOOK);
+        result.setCount(1);
         result.set(DataComponents.WRITTEN_BOOK_CONTENT, content);
         return result;
     }
@@ -127,7 +124,7 @@ public class WrittenBookPrintingBehaviour implements PrintingBehaviour {
                 .forGoggles(tooltip);
         getCost(tank.getPrimaryHandler().getFluid()).ifPresent(cost -> CEILang.translate("gui.goggles.printing.cost",
                 CEILang.number(cost)
-                        .add(CreateLang.translate("generic.unit.millibuckets"))
+                        .add(CEILang.translateCreate("generic.unit.millibuckets"))
                         .style(cost <= CEIConfig.fluids().printerFluidCapacity.get()
                                 ? ChatFormatting.GREEN
                                 : ChatFormatting.RED))

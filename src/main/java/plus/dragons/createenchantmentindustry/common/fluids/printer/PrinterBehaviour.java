@@ -18,19 +18,15 @@
 
 package plus.dragons.createenchantmentindustry.common.fluids.printer;
 
-import com.simibubi.create.AllSoundEvents;
-import com.simibubi.create.content.logistics.filter.FilterItem;
-import com.simibubi.create.content.logistics.filter.FilterItemStack;
-import com.simibubi.create.foundation.blockEntity.SmartBlockEntity;
-import com.simibubi.create.foundation.blockEntity.behaviour.BehaviourType;
-import com.simibubi.create.foundation.blockEntity.behaviour.ValueBoxTransform;
-import com.simibubi.create.foundation.blockEntity.behaviour.filtering.FilteringBehaviour;
-import com.simibubi.create.foundation.blockEntity.behaviour.fluid.SmartFluidTankBehaviour;
-import com.simibubi.create.foundation.item.ItemHelper;
+import com.zurrtum.create.AllSoundEvents;
+import com.zurrtum.create.content.logistics.filter.FilterItem;
+import com.zurrtum.create.content.logistics.filter.FilterItemStack;
+import com.zurrtum.create.foundation.blockEntity.SmartBlockEntity;
+import com.zurrtum.create.foundation.blockEntity.behaviour.BehaviourType;
+import com.zurrtum.create.foundation.blockEntity.behaviour.filtering.ServerFilteringBehaviour;
+import com.zurrtum.create.foundation.blockEntity.behaviour.fluid.SmartFluidTankBehaviour;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.HolderLookup.Provider;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -38,21 +34,21 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.BlockHitResult;
-import net.neoforged.neoforge.items.wrapper.InvWrapper;
 import org.jetbrains.annotations.Nullable;
-import plus.dragons.createdragonsplus.util.CodeReference;
 import plus.dragons.createenchantmentindustry.common.fluids.printer.behaviour.PrintingBehaviour;
 import plus.dragons.createenchantmentindustry.common.fluids.printer.behaviour.RecipePrintingBehaviour;
 
-public class PrinterBehaviour extends FilteringBehaviour {
+public class PrinterBehaviour extends ServerFilteringBehaviour {
     public static final BehaviourType<PrinterBehaviour> TYPE = new BehaviourType<>();
     public static final String TEMPLATE = "PrintingTemplate";
     private final SmartFluidTankBehaviour tank;
     private PrintingBehaviour printing = new RecipePrintingBehaviour(ItemStack.EMPTY);
 
-    public PrinterBehaviour(SmartBlockEntity be, SmartFluidTankBehaviour tank, ValueBoxTransform slot) {
-        super(be, slot);
+    public PrinterBehaviour(SmartBlockEntity be, SmartFluidTankBehaviour tank) {
+        super(be);
         this.tank = tank;
     }
 
@@ -61,7 +57,7 @@ public class PrinterBehaviour extends FilteringBehaviour {
     }
 
     public boolean setFilter(ItemStack stack, @Nullable Player player) {
-        var result = PrintingBehaviour.create(getWorld(), tank, stack)
+        var result = PrintingBehaviour.create(blockEntity.getLevel(), tank, stack)
                 .resultOrPartial(message -> {
                     if (player != null)
                         player.displayClientMessage(Component.translatable(message), true);
@@ -84,20 +80,20 @@ public class PrinterBehaviour extends FilteringBehaviour {
     }
 
     @Override
-    public void write(CompoundTag nbt, Provider registries, boolean clientPacket) {
-        nbt.put(TEMPLATE, getFilter().saveOptional(registries));
+    public void write(ValueOutput output, boolean clientPacket) {
+        output.store(TEMPLATE, ItemStack.OPTIONAL_CODEC, getFilter());
     }
 
     @Override
-    public void writeSafe(CompoundTag nbt, Provider registries) {
+    public void writeSafe(ValueOutput output) {
         if (printing.isSafeNBT())
-            nbt.put(TEMPLATE, getFilter().saveOptional(registries));
+            output.store(TEMPLATE, ItemStack.OPTIONAL_CODEC, getFilter());
     }
 
     @Override
-    public void read(CompoundTag nbt, Provider registries, boolean clientPacket) {
-        var filter = FilterItemStack.of(registries, nbt.getCompound(TEMPLATE));
-        var printing = PrintingBehaviour.create(getWorld(), tank, filter.item()).result();
+    public void read(ValueInput input, boolean clientPacket) {
+        var filter = FilterItemStack.of(input.read(TEMPLATE, ItemStack.OPTIONAL_CODEC).orElse(ItemStack.EMPTY));
+        var printing = PrintingBehaviour.create(blockEntity.getLevel(), tank, filter.item()).result();
         if (printing.isPresent()) {
             this.filter = filter;
             this.printing = printing.get();
@@ -113,24 +109,24 @@ public class PrinterBehaviour extends FilteringBehaviour {
     }
 
     @Override
-    public boolean writeToClipboard(Provider registries, CompoundTag tag, Direction side) {
-        ItemStack template = getFilter();
-        tag.put(TEMPLATE, template.saveOptional(registries));
+    public boolean writeToClipboard(ValueOutput output, Direction side) {
+        output.store(TEMPLATE, ItemStack.OPTIONAL_CODEC, getFilter());
         return true;
     }
 
     @Override
-    public boolean readFromClipboard(Provider registries, CompoundTag tag, Player player, Direction side, boolean simulate) {
-        if (!tag.contains(TEMPLATE))
+    public boolean readFromClipboard(ValueInput input, Player player, Direction side, boolean simulate) {
+        var template = input.read(TEMPLATE, ItemStack.OPTIONAL_CODEC);
+        if (template.isEmpty())
             return false;
-        ItemStack template = ItemStack.parseOptional(registries, tag.getCompound(TEMPLATE));
-        return setFilter(template, player);
+        if (simulate)
+            return true;
+        return setFilter(template.get(), player);
     }
 
     @Override
-    @CodeReference(value = FilteringBehaviour.class, targets = "onShortInteract", source = "create", license = "mit")
     public void onShortInteract(Player player, InteractionHand hand, Direction side, BlockHitResult hitResult) {
-        Level level = getWorld();
+        Level level = blockEntity.getLevel();
         BlockPos pos = getPos();
         ItemStack itemInHand = player.getItemInHand(hand);
         ItemStack toApply = itemInHand.copy();
@@ -141,7 +137,7 @@ public class PrinterBehaviour extends FilteringBehaviour {
             return;
 
         if (getFilter().getItem() instanceof FilterItem) {
-            if (!player.isCreative() || ItemHelper.extract(new InvWrapper(player.getInventory()), stack -> ItemStack.isSameItemSameComponents(stack, getFilter(side)), true).isEmpty())
+            if (!player.isCreative() || !player.getInventory().contains(getFilter(side)))
                 player.getInventory().placeItemBackInInventory(getFilter(side).copy());
         }
 

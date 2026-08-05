@@ -2,7 +2,8 @@
   "credit": "By RaymondBlaze, made with Blockbench",
   "parent": "block/block",
   "textures": {
-    "nozzle": "create:block/spout_nozzle"
+    "nozzle": "create:block/spout_nozzle",
+    "particle": "#nozzle"
   },
   "elements": [
     {

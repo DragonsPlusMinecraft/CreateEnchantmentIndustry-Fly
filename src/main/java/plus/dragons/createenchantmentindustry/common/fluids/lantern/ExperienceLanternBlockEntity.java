@@ -20,33 +20,30 @@ package plus.dragons.createenchantmentindustry.common.fluids.lantern;
 
 import static net.minecraft.world.level.block.DirectionalBlock.FACING;
 
-import com.simibubi.create.api.equipment.goggles.IHaveGoggleInformation;
-import com.simibubi.create.foundation.blockEntity.SmartBlockEntity;
-import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
+import com.zurrtum.create.api.behaviour.BlockEntityBehaviour;
+import com.zurrtum.create.foundation.blockEntity.SmartBlockEntity;
+import com.zurrtum.create.foundation.blockEntity.behaviour.fluid.SmartFluidTankBehaviour;
+import com.zurrtum.create.infrastructure.transfer.FluidInventoryStorage;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.network.chat.Component;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import org.jetbrains.annotations.Nullable;
-import plus.dragons.createdragonsplus.common.fluids.tank.ConfigurableFluidTank;
-import plus.dragons.createdragonsplus.common.fluids.tank.FluidTankBehaviour;
+import plus.dragons.createenchantmentindustry.common.fluids.experience.CEIExperienceTankBehaviour;
 import plus.dragons.createenchantmentindustry.common.fluids.experience.ExperienceHelper;
 import plus.dragons.createenchantmentindustry.common.registry.CEIFluids;
 import plus.dragons.createenchantmentindustry.config.CEIConfig;
+import plus.dragons.createenchantmentindustry.util.CEIFluidUnits;
 
-public class ExperienceLanternBlockEntity extends SmartBlockEntity implements IHaveGoggleInformation {
-    protected FluidTankBehaviour tank;
+public class ExperienceLanternBlockEntity extends SmartBlockEntity {
+    protected CEIExperienceTankBehaviour tank;
     protected AABB effectiveAABB;
     protected int rate;
 
@@ -56,23 +53,18 @@ public class ExperienceLanternBlockEntity extends SmartBlockEntity implements IH
         rate = CEIConfig.fluids().experienceLanternDrainRate.get();
     }
 
-    protected ConfigurableFluidTank createTank(Consumer<FluidStack> fluidUpdateCallback) {
-        return new ConfigurableFluidTank(CEIConfig.fluids().experienceLanternFluidCapacity.get(), fluidUpdateCallback.andThen(this::onFluidStackChanged))
-                .allowInsertion(fluidStack -> fluidStack.is(CEIFluids.EXPERIENCE));
-    }
-
     @Override
     public void tick() {
         super.tick();
-        if (!level.isClientSide && level.getGameTime() % 10 == 0) {
+        if (!level.isClientSide() && level.getGameTime() % 10 == 0) {
             drainExp();
         }
-        if (!level.isClientSide && CEIConfig.fluids().experienceLanternPullToggle.get()) {
+        if (!level.isClientSide() && CEIConfig.fluids().experienceLanternPullToggle.get()) {
             pullExp();
         }
     }
 
-    public FluidTankBehaviour getTank() {
+    public CEIExperienceTankBehaviour getTank() {
         return tank;
     }
 
@@ -86,7 +78,9 @@ public class ExperienceLanternBlockEntity extends SmartBlockEntity implements IH
                 else if (playerExp != 0) sum.addAndGet(playerExp);
             });
             if (sum.get() != 0) {
-                var inserted = tank.getPrimaryHandler().fill(new FluidStack(CEIFluids.EXPERIENCE, sum.get()), IFluidHandler.FluidAction.EXECUTE);
+                long insertedUnits = tank.insertExperience(
+                        CEIFluidUnits.stack(CEIFluids.EXPERIENCE.getSource(), sum.get()), false);
+                int inserted = Math.toIntExact(CEIFluidUnits.toMillibuckets(insertedUnits));
                 if (inserted != 0) {
                     for (var player : players) {
                         var total = ExperienceHelper.getExperienceForPlayer(player);
@@ -116,15 +110,12 @@ public class ExperienceLanternBlockEntity extends SmartBlockEntity implements IH
         List<ExperienceOrb> experienceOrbs = level.getEntitiesOfClass(ExperienceOrb.class, effectiveAABB);
         if (!experienceOrbs.isEmpty()) {
             for (var orb : experienceOrbs) {
-                var amount = orb.value;
-                var fluidStack = new FluidStack(CEIFluids.EXPERIENCE.get(), amount);
-                var inserted = tank.getPrimaryHandler().fill(fluidStack, IFluidHandler.FluidAction.EXECUTE);
-                if (inserted == amount) {
-                    orb.remove(Entity.RemovalReason.DISCARDED);
-                } else {
-                    if (inserted != 0) {
-                        orb.value -= inserted;
-                    }
+                int amount = ExperienceHelper.getFluidConvertibleExperience(orb);
+                var fluidStack = CEIFluidUnits.stack(CEIFluids.EXPERIENCE.getSource(), amount);
+                long insertedUnits = tank.insertExperience(fluidStack, false);
+                int inserted = Math.toIntExact(CEIFluidUnits.toMillibuckets(insertedUnits));
+                ExperienceHelper.consumeExperience(orb, inserted);
+                if (!orb.isRemoved()) {
                     break;
                 }
             }
@@ -138,32 +129,32 @@ public class ExperienceLanternBlockEntity extends SmartBlockEntity implements IH
                 if (orb.getDeltaMovement().length() <= .5) {
                     var pushForce = CEIConfig.fluids().experienceLanternPullForceMultiplier.get() * 1 / orb.position().distanceTo(getBlockPos().getCenter());
                     var directionToLantern = getBlockPos().getCenter().subtract(orb.position()).normalize().multiply(pushForce, pushForce, pushForce);
-                    orb.push(directionToLantern);
+                    orb.push(directionToLantern.x, directionToLantern.y, directionToLantern.z);
                 }
             }
         }
     }
 
     @Override
-    public void addBehaviours(List<BlockEntityBehaviour> behaviours) {
-        tank = new FluidTankBehaviour(this, this::createTank);
+    public void addBehaviours(List<BlockEntityBehaviour<?>> behaviours) {
+        int capacity = Math.toIntExact(
+                CEIFluidUnits.millibuckets(CEIConfig.fluids().experienceLanternFluidCapacity.get()));
+        tank = new CEIExperienceTankBehaviour(SmartFluidTankBehaviour.INPUT, this, capacity, true)
+                .whenFluidUpdates(this::onFluidStackChanged);
         behaviours.add(tank);
     }
 
-    protected void onFluidStackChanged(FluidStack newFluidStack) {
-        int light = ((int) (((float) tank.getPrimaryTank().tank.getFluid().getAmount() / tank.getPrimaryTank().tank.getCapacity()) * 15f));
+    protected void onFluidStackChanged() {
+        var segment = tank.getPrimaryHandler();
+        int light = (int) (segment.getFluid().getAmount() / (float) segment.getMaxAmountPerStack() * 15f);
         light = Math.min(Math.max(0, light), 15);
-        level.setBlockAndUpdate(getBlockPos(), getBlockState().setValue(ExperienceLanternBlock.LIGHT, light));
+        if (level != null && getBlockState().getValue(ExperienceLanternBlock.LIGHT) != light)
+            level.setBlockAndUpdate(getBlockPos(), getBlockState().setValue(ExperienceLanternBlock.LIGHT, light));
     }
 
-    public @Nullable IFluidHandler getFluidHandler(@Nullable Direction side) {
-        if (side == null || side.getOpposite() == getBlockState().getValue(FACING))
-            return tank.getCapability();
-        return null;
-    }
-
-    @Override
-    public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
-        return containedFluidTooltip(tooltip, isPlayerSneaking, level.getCapability(Capabilities.FluidHandler.BLOCK, worldPosition, null));
+    public @Nullable Storage<FluidVariant> getFluidStorage(@Nullable Direction side) {
+        return tank != null && (side == null || side.getOpposite() == getBlockState().getValue(FACING))
+                ? FluidInventoryStorage.of(tank.getCapability(), side)
+                : null;
     }
 }

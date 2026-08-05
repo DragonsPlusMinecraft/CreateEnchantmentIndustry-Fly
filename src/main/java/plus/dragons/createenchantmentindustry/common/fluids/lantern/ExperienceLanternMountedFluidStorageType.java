@@ -18,7 +18,7 @@
 
 package plus.dragons.createenchantmentindustry.common.fluids.lantern;
 
-import com.simibubi.create.api.contraption.storage.fluid.MountedFluidStorageType;
+import com.zurrtum.create.api.contraption.storage.fluid.MountedFluidStorageType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;

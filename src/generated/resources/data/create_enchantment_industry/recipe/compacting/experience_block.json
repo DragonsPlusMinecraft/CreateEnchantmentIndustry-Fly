@@ -1,15 +1,15 @@
 {
-    "type": "create:compacting",
-    "ingredients": [
-        {
-            "type": "neoforge:single",
-            "amount": 27,
-            "fluid": "create_enchantment_industry:experience"
-        }
-    ],
-    "results": [
-        {
-            "id": "create:experience_block"
-        }
-    ]
+  "type": "create:compacting",
+  "fluid_ingredients": [
+    {
+      "type": "fluid_stack",
+      "amount": 2187,
+      "fluid": "create_enchantment_industry:experience"
+    }
+  ],
+  "results": [
+    {
+      "id": "create:experience_block"
+    }
+  ]
 }

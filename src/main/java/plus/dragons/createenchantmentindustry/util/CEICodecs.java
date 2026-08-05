@@ -26,6 +26,7 @@ import net.minecraft.world.item.enchantment.EnchantmentInstance;
 public class CEICodecs {
     public static final Codec<EnchantmentInstance> ENCHANTMENT_INSTANCE = RecordCodecBuilder
             .create(instance -> instance.group(
-                    Enchantment.CODEC.fieldOf("id").forGetter(it -> it.enchantment),
-                    Codec.intRange(0, 255).fieldOf("level").forGetter(it -> it.level)).apply(instance, EnchantmentInstance::new));
+                    Enchantment.CODEC.fieldOf("id").forGetter(EnchantmentInstance::enchantment),
+                    Codec.intRange(0, 255).fieldOf("level").forGetter(EnchantmentInstance::level))
+                    .apply(instance, EnchantmentInstance::new));
 }

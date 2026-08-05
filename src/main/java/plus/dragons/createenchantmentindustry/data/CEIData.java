@@ -18,43 +18,32 @@
 
 package plus.dragons.createenchantmentindustry.data;
 
-import static plus.dragons.createenchantmentindustry.common.CEICommon.REGISTRATE;
-
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.neoforge.data.event.GatherDataEvent;
-import net.neoforged.neoforge.data.loading.DatagenModLoader;
-import plus.dragons.createenchantmentindustry.client.ponder.CEIPonderPlugin;
-import plus.dragons.createenchantmentindustry.common.CEICommon;
+import net.fabricmc.fabric.api.datagen.v1.DataGeneratorEntrypoint;
+import net.fabricmc.fabric.api.datagen.v1.FabricDataGenerator;
+import net.minecraft.core.RegistrySetBuilder;
+import net.minecraft.data.DataProvider;
 import plus.dragons.createenchantmentindustry.common.registry.CEIAdvancements;
 
-@Mod(CEICommon.ID)
-public class CEIData {
-    public CEIData(IEventBus modBus) {
-        if (!DatagenModLoader.isRunningDataGen())
-            return;
-        REGISTRATE.registerBuiltinLocalization("interface");
-        REGISTRATE.registerForeignLocalization();
-        REGISTRATE.registerPonderLocalization(CEIPonderPlugin::new);
-        REGISTRATE.registerExtraLocalization(CEIAdvancements::provideLang);
-        modBus.register(this);
+/** Core-only Fabric data generation entry point. */
+public final class CEIData implements DataGeneratorEntrypoint {
+    @Override
+    public void onInitializeDataGenerator(FabricDataGenerator generator) {
+        FabricDataGenerator.Pack pack = generator.createPack();
+        pack.addProvider((DataProvider.Factory<CEIAssetProvider>) CEIAssetProvider::new);
+        pack.addProvider(CEIGenerateEntriesProvider::new);
+        pack.addProvider((DataProvider.Factory<CEIDataMapProvider>) CEIDataMapProvider::new);
+        pack.addProvider(CEIRecipeProvider::new);
+        pack.addProvider(CEIAdvancements::new);
+        pack.addProvider(CEILanguageProvider::new);
+        pack.addProvider(CEIEnchantmentTagsProvider::new);
+        pack.addProvider(CEIBlockLootProvider::new);
+        pack.addProvider(CEIBlockTagsProvider::new);
+        pack.addProvider(CEIItemTagsProvider::new);
+        pack.addProvider(CEIFluidTagsProvider::new);
     }
 
-    @SubscribeEvent
-    public void generate(final GatherDataEvent event) {
-        var generator = event.getGenerator();
-        var existingFileHelper = event.getExistingFileHelper();
-        var lookupProvider = event.getLookupProvider();
-        var output = generator.getPackOutput();
-        var client = event.includeClient();
-        var server = event.includeServer();
-
-        CEIGenerateEntriesProvider generatedEntriesProvider = new CEIGenerateEntriesProvider(output, lookupProvider);
-        lookupProvider = generatedEntriesProvider.getRegistryProvider();
-
-        generator.addProvider(event.includeServer(), generatedEntriesProvider);
-        generator.addProvider(server, new CEIRecipeProvider(output, lookupProvider));
-        generator.addProvider(server, new CEIAdvancements(output, lookupProvider));
+    @Override
+    public void buildRegistry(RegistrySetBuilder builder) {
+        CEIGenerateEntriesProvider.addBootstraps(builder);
     }
 }

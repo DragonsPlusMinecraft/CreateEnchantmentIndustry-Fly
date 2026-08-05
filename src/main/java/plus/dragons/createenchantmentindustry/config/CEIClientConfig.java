@@ -18,7 +18,7 @@
 
 package plus.dragons.createenchantmentindustry.config;
 
-import net.createmod.catnip.config.ConfigBase;
+import com.zurrtum.create.catnip.config.ConfigBase;
 
 public class CEIClientConfig extends ConfigBase {
     public final ConfigFloat experienceVisionMultiplier = f(1f, 1f, 256f,

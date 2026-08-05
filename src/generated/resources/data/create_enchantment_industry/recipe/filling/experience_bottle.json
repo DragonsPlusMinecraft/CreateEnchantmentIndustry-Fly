@@ -1,18 +1,13 @@
 {
-    "type": "create:filling",
-    "ingredients": [
-        {
-            "item": "minecraft:glass_bottle"
-        },
-        {
-            "type": "neoforge:single",
-            "amount": 10,
-            "fluid": "create_enchantment_industry:experience"
-        }
-    ],
-    "results": [
-        {
-            "id": "minecraft:experience_bottle"
-        }
-    ]
+  "type": "create:filling",
+  "fluid_ingredient": {
+    "type": "fluid_stack",
+    "amount": 810,
+    "fluid": "create_enchantment_industry:experience"
+  },
+  "ingredient": "minecraft:glass_bottle",
+  "result": {
+    "count": 1,
+    "id": "minecraft:experience_bottle"
+  }
 }

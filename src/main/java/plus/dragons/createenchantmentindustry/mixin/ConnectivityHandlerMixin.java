@@ -19,12 +19,12 @@
 package plus.dragons.createenchantmentindustry.mixin;
 
 import com.llamalad7.mixinextras.sugar.Local;
-import com.simibubi.create.api.connectivity.ConnectivityHandler;
-import com.simibubi.create.content.fluids.tank.CreativeFluidTankBlockEntity;
-import com.simibubi.create.foundation.blockEntity.IMultiBlockEntityContainer;
+import com.zurrtum.create.api.connectivity.ConnectivityHandler;
+import com.zurrtum.create.content.fluids.tank.CreativeFluidTankBlockEntity;
+import com.zurrtum.create.foundation.blockEntity.IMultiBlockEntityContainer;
+import com.zurrtum.create.infrastructure.fluids.FluidStack;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.neoforged.neoforge.fluids.FluidStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Coerce;
@@ -33,28 +33,30 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import plus.dragons.createenchantmentindustry.common.fluids.experience.ExperienceFluidDropContext;
 import plus.dragons.createenchantmentindustry.common.fluids.experience.ExperienceHelper;
 
-@Mixin(ConnectivityHandler.class)
+@Mixin(value = ConnectivityHandler.class, remap = false)
 public class ConnectivityHandlerMixin {
-    @Inject(method = "splitMultiAndInvalidate", at = @At(value = "RETURN", ordinal = 2))
+    @Inject(method = "splitMultiAndInvalidate", at = @At(value = "RETURN", ordinal = 2), remap = false)
     private static <T extends BlockEntity & IMultiBlockEntityContainer> void splitMulti$dropExperienceFluidSingle(T be, @Coerce Object cache, boolean tryReconnect, CallbackInfo ci) {
         if (!(be.getLevel() instanceof ServerLevel level && be.isRemoved()))
             return;
         if (!(be instanceof IMultiBlockEntityContainer.Fluid fluidContainer))
             return;
-        if (!fluidContainer.hasTank() || fluidContainer.getTank(0) instanceof CreativeFluidTankBlockEntity.CreativeSmartFluidTank)
+        if (!fluidContainer.hasTank()
+                || fluidContainer.getTank(0) instanceof CreativeFluidTankBlockEntity.CreativeFluidTankInventory)
             return;
         var dropped = fluidContainer.getFluid(0);
         int experience = ExperienceHelper.getExperienceFromFluid(dropped);
         ExperienceFluidDropContext.dropExperience(level, be.getBlockState(), be.getBlockPos(), experience);
     }
 
-    @Inject(method = "splitMultiAndInvalidate", at = @At("TAIL"))
-    private static <T extends BlockEntity & IMultiBlockEntityContainer> void splitMulti$dropExperienceFluidMulti(T be, @Coerce Object cache, boolean tryReconnect, CallbackInfo ci, @Local FluidStack dropped) {
+    @Inject(method = "splitMultiAndInvalidate", at = @At("TAIL"), remap = false)
+    private static <T extends BlockEntity & IMultiBlockEntityContainer> void splitMulti$dropExperienceFluidMulti(T be, @Coerce Object cache, boolean tryReconnect, CallbackInfo ci, @Local(ordinal = 0) FluidStack dropped) {
         if (!(be.getLevel() instanceof ServerLevel level))
             return;
         if (!(be instanceof IMultiBlockEntityContainer.Fluid fluidContainer))
             return;
-        if (!fluidContainer.hasTank() || fluidContainer.getTank(0) instanceof CreativeFluidTankBlockEntity.CreativeSmartFluidTank)
+        if (!fluidContainer.hasTank()
+                || fluidContainer.getTank(0) instanceof CreativeFluidTankBlockEntity.CreativeFluidTankInventory)
             return;
         int experience = ExperienceHelper.getExperienceFromFluid(dropped);
         ExperienceFluidDropContext.dropExperience(level, be.getBlockState(), be.getBlockPos(), experience);

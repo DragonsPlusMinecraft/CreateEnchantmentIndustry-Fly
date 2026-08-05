@@ -19,10 +19,9 @@
 package plus.dragons.createenchantmentindustry.common.fluids.printer.behaviour;
 
 import com.mojang.serialization.DataResult;
-import com.simibubi.create.AllDataComponents;
-import com.simibubi.create.content.logistics.box.PackageItem;
-import com.simibubi.create.foundation.blockEntity.behaviour.fluid.SmartFluidTankBehaviour;
-import com.simibubi.create.foundation.utility.CreateLang;
+import com.zurrtum.create.content.logistics.box.PackageItem;
+import com.zurrtum.create.foundation.blockEntity.behaviour.fluid.SmartFluidTankBehaviour;
+import com.zurrtum.create.infrastructure.fluids.FluidStack;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.ChatFormatting;
@@ -30,10 +29,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.fluids.FluidStack;
 import plus.dragons.createenchantmentindustry.common.fluids.printer.PrinterBlockEntity;
+import plus.dragons.createenchantmentindustry.common.item.CEIItemData;
 import plus.dragons.createenchantmentindustry.common.registry.CEIDataMaps;
 import plus.dragons.createenchantmentindustry.config.CEIConfig;
+import plus.dragons.createenchantmentindustry.util.CEIFluidUnits;
 import plus.dragons.createenchantmentindustry.util.CEILang;
 
 public class AddressPrintingBehaviour implements PrintingBehaviour {
@@ -47,8 +47,8 @@ public class AddressPrintingBehaviour implements PrintingBehaviour {
 
     public static Optional<DataResult<PrintingBehaviour>> create(Level level, SmartFluidTankBehaviour tank, ItemStack stack) {
         if (stack.getItem() instanceof PackageItem) {
-            String address = stack.get(AllDataComponents.PACKAGE_ADDRESS);
-            if (address != null && !address.isEmpty())
+            String address = CEIItemData.getPackageAddress(stack);
+            if (!address.isEmpty())
                 return Optional.of(DataResult.success(new AddressPrintingBehaviour(address, tank)));
         }
         return Optional.empty();
@@ -68,14 +68,14 @@ public class AddressPrintingBehaviour implements PrintingBehaviour {
 
     @Override
     public int getRequiredFluidAmount(Level level, ItemStack stack, FluidStack fluidStack) {
-        var amount = fluidStack.getFluidHolder().getData(CEIDataMaps.PRINTING_ADDRESS_INGREDIENT);
-        return amount == null ? 0 : amount;
+        var amount = CEIDataMaps.PRINTING_ADDRESS_INGREDIENT.get(fluidStack.getFluid());
+        return amount == null ? 0 : Math.toIntExact(CEIFluidUnits.millibuckets(amount));
     }
 
     @Override
     public ItemStack getResult(Level level, ItemStack stack, FluidStack fluidStack) {
         var result = stack.copy();
-        result.set(AllDataComponents.PACKAGE_ADDRESS, address);
+        CEIItemData.setPackageAddress(result, address);
         return result;
     }
 
@@ -90,11 +90,11 @@ public class AddressPrintingBehaviour implements PrintingBehaviour {
         var address = Component.literal("→ " + this.address).withStyle(ChatFormatting.GOLD);
         CEILang.translate("gui.goggles.printing.address").forGoggles(tooltip);
         CEILang.builder().add(address).forGoggles(tooltip, 1);
-        var amount = tank.getPrimaryHandler().getFluid().getFluidHolder().getData(CEIDataMaps.PRINTING_ADDRESS_INGREDIENT);
+        var amount = CEIDataMaps.PRINTING_ADDRESS_INGREDIENT.get(tank.getPrimaryHandler().getFluid().getFluid());
         if (amount != null)
             CEILang.translate("gui.goggles.printing.cost",
                     CEILang.number(amount)
-                            .add(CreateLang.translate("generic.unit.millibuckets"))
+                            .add(CEILang.translateCreate("generic.unit.millibuckets"))
                             .style(amount <= CEIConfig.fluids().printerFluidCapacity.get()
                                     ? ChatFormatting.GREEN
                                     : ChatFormatting.RED))

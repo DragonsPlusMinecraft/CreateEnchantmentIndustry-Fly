@@ -1,25 +1,17 @@
 {
-    "type": "create:compacting",
-    "ingredients": [
-        {
-            "item": "minecraft:infested_stone"
-        },
-        {
-            "item": "minecraft:infested_stone"
-        },
-        {
-            "item": "minecraft:infested_stone"
-        },
-        {
-            "item": "minecraft:infested_stone"
-        }
-    ],
-    "results": [
-        {
-            "id": "minecraft:stone_bricks"
-        },
-        {
-            "id": "create:experience_nugget"
-        }
-    ]
+  "type": "create:compacting",
+  "ingredients": [
+    "minecraft:infested_stone",
+    "minecraft:infested_stone",
+    "minecraft:infested_stone",
+    "minecraft:infested_stone"
+  ],
+  "results": [
+    {
+      "id": "minecraft:stone_bricks"
+    },
+    {
+      "id": "create:experience_nugget"
+    }
+  ]
 }

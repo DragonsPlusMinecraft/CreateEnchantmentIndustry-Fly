@@ -18,67 +18,100 @@
 
 package plus.dragons.createenchantmentindustry.common.registry;
 
-import static plus.dragons.createenchantmentindustry.common.CEICommon.REGISTRATE;
-
-import com.simibubi.create.AllTags.AllItemTags;
-import com.simibubi.create.content.materials.ExperienceNuggetItem;
-import com.tterrag.registrate.util.entry.ItemEntry;
-import net.minecraft.core.component.DataComponents;
+import com.zurrtum.create.content.materials.ExperienceNuggetItem;
+import com.zurrtum.create.content.processing.AssemblyOperatorBlockItem;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.BucketItem;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.Rarity;
-import net.minecraft.world.item.enchantment.ItemEnchantments;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.common.Tags;
-import net.neoforged.neoforge.registries.DeferredItem;
+import net.minecraft.world.level.block.Block;
 import plus.dragons.createenchantmentindustry.common.CEICommon;
+import plus.dragons.createenchantmentindustry.common.item.FoilBucketItem;
+import plus.dragons.createenchantmentindustry.common.item.FoilItem;
+import plus.dragons.createenchantmentindustry.common.kinetics.grindstone.MechanicalGrindStoneItem;
+import plus.dragons.createenchantmentindustry.common.processing.BlazeCustomRenderedBlockItem;
 import plus.dragons.createenchantmentindustry.common.processing.enchanter.EnchantingTemplateItem;
 
-public class CEIItems {
-    public static final ItemEntry<ExperienceNuggetItem> SUPER_EXPERIENCE_NUGGET = REGISTRATE
-            .item("super_experience_nugget", ExperienceNuggetItem::new)
-            .tag(Tags.Items.NUGGETS)
-            .properties(p -> p.rarity(Rarity.RARE))
-            .lang("Nugget of Super Experience")
-            .register();
-    public static final ItemEntry<EnchantingTemplateItem> ENCHANTING_TEMPLATE = REGISTRATE
-            .item("enchanting_template", EnchantingTemplateItem::normal)
-            .properties(prop -> prop
-                    .rarity(Rarity.UNCOMMON)
-                    .component(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY))
-            .register();
-    public static final ItemEntry<EnchantingTemplateItem> SUPER_ENCHANTING_TEMPLATE = REGISTRATE
-            .item("super_enchanting_template", EnchantingTemplateItem::special)
-            .properties(prop -> prop
-                    .rarity(Rarity.RARE)
-                    .component(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY))
-            .register();
-    public static final ItemEntry<Item> BLAZES_ENCHANTING_HANDBOOK = REGISTRATE
-            .item("blazes_enchanting_handbook", Item::new)
-            .lang("Blaze's Enchanting Handbook")
-            .register();
-    public static final ItemEntry<Item> EXPERIENCE_CAKE_BASE = REGISTRATE
-            .item("experience_cake_base", Item::new)
-            .lang("Cake Base o' Enchanting")
-            .tag(AllItemTags.UPRIGHT_ON_BELT.tag)
-            .register();
-    public static final ItemEntry<Item> EXPERIENCE_CAKE = REGISTRATE
-            .item("experience_cake", Item::new)
-            .lang("Cake o' Enchanting")
-            .properties(prop -> prop
-                    .rarity(Rarity.RARE)
-                    .component(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true))
-            .tag(AllItemTags.UPRIGHT_ON_BELT.tag)
-            .register();
-    public static final ItemEntry<Item> EXPERIENCE_CAKE_SLICE = REGISTRATE
-            .item("experience_cake_slice", Item::new)
-            .lang("Cake Slice o' Enchanting")
-            .properties(prop -> prop
-                    .rarity(Rarity.RARE)
-                    .component(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true))
-            .register();
-    public static final DeferredItem<BucketItem> EXPERIENCE_BUCKET = DeferredItem
-            .createItem(CEICommon.asResource("experience_bucket"));
+/** Explicit item registration performed from the common Fabric initializer. */
+public final class CEIItems {
+    private static final CEIRegistryEntry<MechanicalGrindStoneItem> MECHANICAL_GRINDSTONE = registerBlockItem(
+            CEIBlocks.MECHANICAL_GRINDSTONE, MechanicalGrindStoneItem::new, new Item.Properties());
+    private static final CEIRegistryEntry<BlockItem> GRINDSTONE_DRAIN = registerBlockItem(
+            CEIBlocks.GRINDSTONE_DRAIN, BlockItem::new, new Item.Properties());
+    private static final CEIRegistryEntry<BlockItem> EXPERIENCE_HATCH = registerBlockItem(
+            CEIBlocks.EXPERIENCE_HATCH, BlockItem::new, new Item.Properties());
+    private static final CEIRegistryEntry<AssemblyOperatorBlockItem> PRINTER = registerBlockItem(
+            CEIBlocks.PRINTER, AssemblyOperatorBlockItem::new, new Item.Properties());
+    private static final CEIRegistryEntry<BlazeCustomRenderedBlockItem.Enchanter> BLAZE_ENCHANTER = registerBlockItem(
+            CEIBlocks.BLAZE_ENCHANTER, BlazeCustomRenderedBlockItem.Enchanter::new, new Item.Properties());
+    private static final CEIRegistryEntry<BlazeCustomRenderedBlockItem.Forger> BLAZE_FORGER = registerBlockItem(
+            CEIBlocks.BLAZE_FORGER, BlazeCustomRenderedBlockItem.Forger::new, new Item.Properties());
+    private static final CEIRegistryEntry<BlazeCustomRenderedBlockItem.ClassicEnchanter> CLASSIC_BLAZE_ENCHANTER = registerBlockItem(
+            CEIBlocks.CLASSIC_BLAZE_ENCHANTER,
+            BlazeCustomRenderedBlockItem.ClassicEnchanter::new,
+            new Item.Properties());
+    private static final CEIRegistryEntry<BlockItem> SUPER_EXPERIENCE_BLOCK = registerBlockItem(
+            CEIBlocks.SUPER_EXPERIENCE_BLOCK, BlockItem::new, new Item.Properties().rarity(Rarity.RARE));
+    private static final CEIRegistryEntry<BlockItem> EXPERIENCE_LANTERN = registerBlockItem(
+            CEIBlocks.EXPERIENCE_LANTERN, BlockItem::new, new Item.Properties());
 
-    public static void register(IEventBus modBus) {}
+    public static final CEIRegistryEntry<ExperienceNuggetItem> SUPER_EXPERIENCE_NUGGET = register(
+            "super_experience_nugget", ExperienceNuggetItem::new, new Item.Properties().rarity(Rarity.RARE));
+    public static final CEIRegistryEntry<EnchantingTemplateItem> ENCHANTING_TEMPLATE = register(
+            "enchanting_template", EnchantingTemplateItem::normal, new Item.Properties().rarity(Rarity.UNCOMMON));
+    public static final CEIRegistryEntry<EnchantingTemplateItem> SUPER_ENCHANTING_TEMPLATE = register(
+            "super_enchanting_template", EnchantingTemplateItem::special, new Item.Properties().rarity(Rarity.RARE));
+    public static final CEIRegistryEntry<Item> BLAZES_ENCHANTING_HANDBOOK = register(
+            "blazes_enchanting_handbook", Item::new, new Item.Properties());
+    public static final CEIRegistryEntry<Item> EXPERIENCE_CAKE_BASE = register(
+            "experience_cake_base", Item::new, new Item.Properties());
+    public static final CEIRegistryEntry<FoilItem> EXPERIENCE_CAKE = register(
+            "experience_cake", FoilItem::new, new Item.Properties().rarity(Rarity.RARE));
+    public static final CEIRegistryEntry<FoilItem> EXPERIENCE_CAKE_SLICE = register(
+            "experience_cake_slice", FoilItem::new, new Item.Properties().rarity(Rarity.RARE));
+    public static final CEIRegistryEntry<BucketItem> EXPERIENCE_BUCKET = register(
+            "experience_bucket",
+            properties -> new FoilBucketItem(CEIFluids.EXPERIENCE.getSource(), properties),
+            new Item.Properties().craftRemainder(Items.BUCKET).stacksTo(1).rarity(Rarity.UNCOMMON));
+
+    static {
+        CEIFluids.attachBucket(EXPERIENCE_BUCKET.get());
+    }
+
+    private CEIItems() {}
+
+    public static void register() {
+        // Class initialization performs the ordered vanilla registrations above.
+    }
+
+    private static <B extends Block, I extends BlockItem> CEIRegistryEntry<I> registerBlockItem(
+            CEIRegistryEntry<B> block,
+            BiFunction<B, Item.Properties, I> factory,
+            Item.Properties properties) {
+        return register(block.getId(), itemProperties -> factory.apply(block.get(), itemProperties), properties.useBlockDescriptionPrefix());
+    }
+
+    private static <T extends Item> CEIRegistryEntry<T> register(
+            String path, Function<Item.Properties, T> factory, Item.Properties properties) {
+        return register(CEICommon.asResource(path), factory, properties);
+    }
+
+    private static <T extends Item> CEIRegistryEntry<T> register(
+            Identifier id, Function<Item.Properties, T> factory, Item.Properties properties) {
+        ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, id);
+        T item = factory.apply(properties.setId(key));
+        if (item instanceof BlockItem blockItem) {
+            blockItem.registerBlocks(Item.BY_BLOCK, item);
+        }
+        item = Registry.register(BuiltInRegistries.ITEM, key, item);
+        return new CEIRegistryEntry<>(id, item);
+    }
 }

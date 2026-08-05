@@ -26,7 +26,7 @@ import net.minecraft.world.level.LevelReader;
 
 public class CEIDamageSources {
     public static DamageSource grind(LevelReader level) {
-        Registry<DamageType> registry = level.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE);
-        return new DamageSource(registry.getHolderOrThrow(CEIDamageTypes.GRIND));
+        Registry<DamageType> registry = level.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE);
+        return new DamageSource(registry.getOrThrow(CEIDamageTypes.GRIND));
     }
 }

@@ -3,7 +3,8 @@
   "parent": "block/block",
   "textures": {
     "hose": "create:block/hose",
-    "head": "create:block/mechanical_press_head"
+    "head": "create:block/mechanical_press_head",
+    "particle": "#head"
   },
   "elements": [
     {

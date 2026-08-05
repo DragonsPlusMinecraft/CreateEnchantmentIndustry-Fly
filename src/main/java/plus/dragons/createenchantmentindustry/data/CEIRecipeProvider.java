@@ -18,240 +18,307 @@
 
 package plus.dragons.createenchantmentindustry.data;
 
-import static com.simibubi.create.AllBlocks.*;
-import static com.simibubi.create.AllItems.*;
-import static net.minecraft.world.item.Items.*;
-import static net.neoforged.neoforge.common.Tags.Items.EGGS;
-import static net.neoforged.neoforge.common.Tags.Items.STORAGE_BLOCKS_IRON;
-import static plus.dragons.createdragonsplus.common.registry.CDPBlocks.FLUID_HATCH;
-import static plus.dragons.createdragonsplus.common.registry.CDPItems.BLAZE_UPGRADE_SMITHING_TEMPLATE;
-import static plus.dragons.createdragonsplus.data.recipe.CreateRecipeBuilders.*;
-import static plus.dragons.createdragonsplus.data.recipe.VanillaRecipeBuilders.shaped;
-import static plus.dragons.createdragonsplus.data.recipe.VanillaRecipeBuilders.shapeless;
-import static plus.dragons.createenchantmentindustry.common.registry.CEIBlocks.*;
-import static plus.dragons.createenchantmentindustry.common.registry.CEIFluids.EXPERIENCE;
-import static plus.dragons.createenchantmentindustry.common.registry.CEIItems.*;
-
-import com.simibubi.create.foundation.data.recipe.CommonMetal;
+import com.zurrtum.create.AllBlocks;
+import com.zurrtum.create.AllItems;
+import com.zurrtum.create.content.fluids.transfer.EmptyingRecipe;
+import com.zurrtum.create.content.fluids.transfer.FillingRecipe;
+import com.zurrtum.create.content.kinetics.crusher.CrushingRecipe;
+import com.zurrtum.create.content.kinetics.deployer.ManualApplicationRecipe;
+import com.zurrtum.create.content.kinetics.mixer.CompactingRecipe;
+import com.zurrtum.create.content.kinetics.press.PressingRecipe;
+import com.zurrtum.create.content.kinetics.saw.CuttingRecipe;
+import com.zurrtum.create.content.processing.recipe.HeatCondition;
+import com.zurrtum.create.content.processing.recipe.ProcessingOutput;
+import com.zurrtum.create.content.processing.recipe.SizedIngredient;
+import com.zurrtum.create.foundation.fluid.FluidIngredient;
+import com.zurrtum.create.foundation.fluid.FluidStackIngredient;
+import com.zurrtum.create.infrastructure.fluids.FluidStack;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import net.minecraft.advancements.Advancement;
-import net.minecraft.advancements.AdvancementHolder;
-import net.minecraft.core.HolderLookup.Provider;
-import net.minecraft.data.PackOutput;
+import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
+import net.fabricmc.fabric.api.datagen.v1.provider.FabricRecipeProvider;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponentPatch;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.data.recipes.RecipeCategory;
 import net.minecraft.data.recipes.RecipeOutput;
 import net.minecraft.data.recipes.RecipeProvider;
 import net.minecraft.data.recipes.SmithingTransformRecipeBuilder;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.block.Blocks;
-import net.neoforged.neoforge.common.conditions.ICondition;
-import org.jetbrains.annotations.Nullable;
-import plus.dragons.createdragonsplus.data.recipe.integration.IntegrationIngredient;
+import plus.dragons.createdragonsplus.registry.CDPBlocks;
+import plus.dragons.createdragonsplus.registry.CDPItems;
 import plus.dragons.createenchantmentindustry.common.CEICommon;
 import plus.dragons.createenchantmentindustry.common.kinetics.grindstone.GrindingRecipe;
-import plus.dragons.createenchantmentindustry.config.CEIConfig;
+import plus.dragons.createenchantmentindustry.common.registry.CEIBlocks;
+import plus.dragons.createenchantmentindustry.common.registry.CEIFluids;
+import plus.dragons.createenchantmentindustry.common.registry.CEIItems;
+import plus.dragons.createenchantmentindustry.util.CEIFluidUnits;
 
-public class CEIRecipeProvider extends RecipeProvider {
-    private static final String ANDESITE = "andesite";
-    private static final String COPPER = "copper";
-    private static final String BRASS = "brass";
-    private static final String TRAIN = "train";
-
-    public CEIRecipeProvider(PackOutput output, CompletableFuture<Provider> registries) {
-        super(output, registries);
+/** Generates the core-only recipe set through the live 1.21.11 recipe codecs. */
+public final class CEIRecipeProvider extends FabricRecipeProvider {
+    public CEIRecipeProvider(
+            FabricDataOutput output, CompletableFuture<HolderLookup.Provider> registriesFuture) {
+        super(output, registriesFuture);
     }
 
     @Override
-    protected void buildRecipes(RecipeOutput output) {
-        buildMachineRecipes(output);
-        buildMaterialRecipes(output);
-        buildExperienceRecipes(output);
+    protected RecipeProvider createRecipeProvider(
+            HolderLookup.Provider registryLookup, RecipeOutput exporter) {
+        return new Provider(registryLookup, exporter);
     }
 
-    private void buildMachineRecipes(RecipeOutput output) {
-        shaped().define('a', ANDESITE_ALLOY)
-                .define('s', SHAFT)
-                .pattern("aaa")
-                .pattern("asa")
-                .pattern("aaa")
-                .output(MECHANICAL_GRINDSTONE)
-                .unlockedBy(ANDESITE, has(ANDESITE_ALLOY))
-                .accept(output);
-        manualApplication(EXPERIENCE_HATCH.getId())
-                .require(FLUID_HATCH)
-                .require(EXPERIENCE_BLOCK)
-                .output(EXPERIENCE_HATCH)
-                .build(output);
-        shaped().define('-', CommonMetal.BRASS.plates)
-                .define('o', SPOUT)
-                .define('=', STORAGE_BLOCKS_IRON)
-                .pattern("-")
-                .pattern("o")
-                .pattern("=")
-                .output(PRINTER)
-                .unlockedBy(BRASS, has(BRASS_INGOT))
-                .accept(output);
-        shaped().define('a', EXPERIENCE_BLOCK)
-                .define('s', SPONGE)
-                .define('c', COPPER_CASING)
-                .pattern("a")
-                .pattern("s")
-                .pattern("c")
-                .output(EXPERIENCE_LANTERN)
-                .unlockedBy(COPPER, has(COPPER_CASING))
-                .accept(output);
-        SmithingTransformRecipeBuilder.smithing(
-                Ingredient.of(BLAZE_UPGRADE_SMITHING_TEMPLATE),
-                Ingredient.of(BLAZE_BURNER),
-                Ingredient.of(ENCHANTING_TABLE),
-                RecipeCategory.MISC,
-                BLAZE_ENCHANTER.asItem())
-                .unlocks("has_blaze_burner", has(BLAZE_BURNER))
-                .save(output, BLAZE_ENCHANTER.getId().withPrefix("smithing/"));
-        SmithingTransformRecipeBuilder.smithing(
-                Ingredient.of(BLAZE_UPGRADE_SMITHING_TEMPLATE),
-                Ingredient.of(BLAZE_BURNER),
-                Ingredient.of(ANVIL),
-                RecipeCategory.MISC,
-                BLAZE_FORGER.asItem())
-                .unlocks("has_blaze_burner", has(BLAZE_BURNER))
-                .save(output, BLAZE_FORGER.getId().withPrefix("smithing/"));
-        SmithingTransformRecipeBuilder.smithing(
-                Ingredient.of(BLAZE_UPGRADE_SMITHING_TEMPLATE),
-                Ingredient.of(BLAZE_BURNER),
-                Ingredient.of(BLAZES_ENCHANTING_HANDBOOK),
-                RecipeCategory.MISC,
-                CLASSIC_BLAZE_ENCHANTER.asItem())
-                .unlocks("has_blaze_burner", has(BLAZE_BURNER))
-                .save(withClassicBlazeEnchanterCondition(output), CLASSIC_BLAZE_ENCHANTER.getId().withPrefix("smithing/"));
+    @Override
+    public String getName() {
+        return "Create: Enchantment Industry Recipes";
     }
 
-    private void buildMaterialRecipes(RecipeOutput output) {
-        shapeless().output(SUPER_EXPERIENCE_NUGGET, 9)
-                .require(SUPER_EXPERIENCE_BLOCK)
-                .accept(output);
-        shaped().output(SUPER_EXPERIENCE_BLOCK)
-                .define('n', SUPER_EXPERIENCE_NUGGET)
-                .pattern("nnn")
-                .pattern("nnn")
-                .pattern("nnn")
-                .accept(output);
-        pressing(ENCHANTING_TEMPLATE.getId())
-                .require(EXPERIENCE_BLOCK)
-                .output(ENCHANTING_TEMPLATE)
-                .build(output);
-        pressing(SUPER_ENCHANTING_TEMPLATE.getId())
-                .require(SUPER_EXPERIENCE_BLOCK)
-                .output(SUPER_ENCHANTING_TEMPLATE)
-                .build(output);
-        shapeless().output(BLAZES_ENCHANTING_HANDBOOK)
-                .require(BLAZE_UPGRADE_SMITHING_TEMPLATE)
-                .require(STURDY_SHEET)
-                .require(STURDY_SHEET)
-                .require(EXPERIENCE_BOTTLE)
-                .require(EXPERIENCE_BOTTLE)
-                .require(MAGMA_BLOCK)
-                .unlockedBy("has_blaze_burner", has(BLAZE_BURNER))
-                .withCondition(CEIConfig.features().classicBlazeEnchanter)
-                .accept(output);
-        compacting(EXPERIENCE_CAKE_BASE.getId())
-                .require(EGGS)
-                .require(SUGAR)
-                .require(LAPIS_LAZULI)
-                .output(EXPERIENCE_CAKE_BASE)
-                .build(output);
-        filling(EXPERIENCE_CAKE.getId())
-                .require(EXPERIENCE_CAKE_BASE)
-                .require(EXPERIENCE.get(), 1000)
-                .output(EXPERIENCE_CAKE)
-                .build(output);
-        cutting(EXPERIENCE_CAKE_SLICE.getId())
-                .require(EXPERIENCE_CAKE)
-                .output(EXPERIENCE_CAKE_SLICE, 4)
-                .build(output);
-    }
+    private static final class Provider extends RecipeProvider {
+        private static final TagKey<Item> EGGS = itemTag("c", "eggs");
+        private static final TagKey<Item> BRASS_PLATES = itemTag("c", "plates/brass");
+        private static final TagKey<Item> STORAGE_BLOCKS_IRON = itemTag("c", "storage_blocks/iron");
 
-    private void buildExperienceRecipes(RecipeOutput output) {
-        compacting(CEICommon.asResource("experience_block"))
-                .require(EXPERIENCE.get(), 27)
-                .output(EXPERIENCE_BLOCK)
-                .build(output);
-        filling(CEICommon.asResource("experience_bottle"))
-                .require(EXPERIENCE.get(), 10)
-                .require(GLASS_BOTTLE)
-                .output(EXPERIENCE_BOTTLE)
-                .build(output);
-        emptying(CEICommon.asResource("experience_bottle"))
-                .require(EXPERIENCE_BOTTLE)
-                .output(EXPERIENCE.get(), 10)
-                .output(GLASS_BOTTLE)
-                .build(output);
-        GrindingRecipe.builder(CEICommon.asResource("experience_nugget"))
-                .require(EXP_NUGGET)
-                .output(EXPERIENCE.get(), 3)
-                .build(output);
-        GrindingRecipe.builder(CEICommon.asResource("experience_block"))
-                .require(EXPERIENCE_BLOCK)
-                .output(EXPERIENCE.get(), 27)
-                .build(output);
-        crushing(CEICommon.asResource("infested_cobblestone"))
-                .require(Blocks.INFESTED_COBBLESTONE)
-                .output(Blocks.GRAVEL)
-                .output(0.5f, EXP_NUGGET.asStack())
-                .build(output);
-        compacting(CEICommon.asResource("infested_stone"))
-                .require(Blocks.INFESTED_STONE).require(Blocks.INFESTED_STONE)
-                .require(Blocks.INFESTED_STONE).require(Blocks.INFESTED_STONE)
-                .output(Blocks.STONE_BRICKS)
-                .output(EXP_NUGGET.asStack())
-                .build(output);
-        GrindingRecipe.builder(SUPER_EXPERIENCE_NUGGET.getId())
-                .require(SUPER_EXPERIENCE_NUGGET)
-                .output(EXPERIENCE.get(), 3)
-                .build(output);
-        GrindingRecipe.builder(SUPER_EXPERIENCE_BLOCK.getId())
-                .require(SUPER_EXPERIENCE_BLOCK)
-                .output(EXPERIENCE.get(), 27)
-                .build(output);
-        GrindingRecipe.builder(CEICommon.asResource("create_sa/heap_of_experience"))
-                .whenModLoaded("create_sa")
-                .require(IntegrationIngredient.of("create_sa", "heap_of_experience"))
-                .output(EXPERIENCE.get(), 12)
-                .build(output);
-        GrindingRecipe.builder(CEICommon.asResource("ars_nouveau/experience_gem"))
-                .whenModLoaded("ars_nouveau")
-                .require(IntegrationIngredient.of("ars_nouveau", "experience_gem"))
-                .output(EXPERIENCE.get(), 3)
-                .build(output);
-        GrindingRecipe.builder(CEICommon.asResource("ars_nouveau/greater_experience_gem"))
-                .whenModLoaded("ars_nouveau")
-                .require(IntegrationIngredient.of("ars_nouveau", "greater_experience_gem"))
-                .output(EXPERIENCE.get(), 12)
-                .build(output);
-        emptying(CEICommon.asResource("mysticalagriculture/experience_droplet"))
-                .whenModLoaded("mysticalagriculture")
-                .require(IntegrationIngredient.of("mysticalagriculture", "experience_droplet"))
-                .output(EXPERIENCE.get(), 10)
-                .build(output);
-    }
+        private Provider(HolderLookup.Provider registries, RecipeOutput output) {
+            super(registries, output);
+        }
 
-    private static RecipeOutput withClassicBlazeEnchanterCondition(RecipeOutput output) {
-        return new RecipeOutput() {
-            @Override
-            public Advancement.Builder advancement() {
-                return output.advancement();
-            }
+        @Override
+        public void buildRecipes() {
+            buildMachineRecipes();
+            buildMaterialRecipes();
+            buildExperienceRecipes();
+        }
 
-            @Override
-            public void accept(ResourceLocation id, Recipe<?> recipe, @Nullable AdvancementHolder advancement, ICondition... conditions) {
-                var feature = CEIConfig.features().classicBlazeEnchanter;
-                var merged = new ICondition[conditions.length + 1];
-                merged[0] = feature;
-                System.arraycopy(conditions, 0, merged, 1, conditions.length);
-                output.accept(id, recipe, advancement, merged);
-            }
-        };
+        private void buildMachineRecipes() {
+            shaped(RecipeCategory.MISC, CEIBlocks.MECHANICAL_GRINDSTONE.get())
+                    .define('a', AllItems.ANDESITE_ALLOY)
+                    .define('s', AllItems.SHAFT)
+                    .pattern("aaa")
+                    .pattern("asa")
+                    .pattern("aaa")
+                    .unlockedBy("has_andesite_alloy", has(AllItems.ANDESITE_ALLOY))
+                    .save(output, key("crafting/mechanical_grindstone"));
+
+            save(
+                    "item_application/experience_hatch",
+                    new ManualApplicationRecipe(
+                            List.of(new ProcessingOutput(CEIBlocks.EXPERIENCE_HATCH.get(), 1)),
+                            false,
+                            Ingredient.of(CDPBlocks.FLUID_HATCH.get()),
+                            Ingredient.of(AllBlocks.EXPERIENCE_BLOCK)));
+
+            shaped(RecipeCategory.MISC, CEIBlocks.PRINTER.get())
+                    .define('-', BRASS_PLATES)
+                    .define('o', AllBlocks.SPOUT)
+                    .define('=', STORAGE_BLOCKS_IRON)
+                    .pattern("-")
+                    .pattern("o")
+                    .pattern("=")
+                    .unlockedBy("has_brass_ingot", has(AllItems.BRASS_INGOT))
+                    .save(output, key("crafting/printer"));
+
+            shaped(RecipeCategory.MISC, CEIBlocks.EXPERIENCE_LANTERN.get())
+                    .define('a', AllBlocks.EXPERIENCE_BLOCK)
+                    .define('s', Blocks.SPONGE)
+                    .define('c', AllBlocks.COPPER_CASING)
+                    .pattern("a")
+                    .pattern("s")
+                    .pattern("c")
+                    .unlockedBy("has_copper_casing", has(AllBlocks.COPPER_CASING))
+                    .save(output, key("crafting/experience_lantern"));
+
+            smithing(
+                    "smithing/blaze_enchanter",
+                    Items.ENCHANTING_TABLE,
+                    CEIBlocks.BLAZE_ENCHANTER.get().asItem());
+            smithing("smithing/blaze_forger", Items.ANVIL, CEIBlocks.BLAZE_FORGER.get().asItem());
+            smithing(
+                    "smithing/classic_blaze_enchanter",
+                    CEIItems.BLAZES_ENCHANTING_HANDBOOK.get(),
+                    CEIBlocks.CLASSIC_BLAZE_ENCHANTER.get().asItem());
+        }
+
+        private void buildMaterialRecipes() {
+            shapeless(RecipeCategory.MISC, CEIItems.SUPER_EXPERIENCE_NUGGET.get(), 9)
+                    .requires(CEIBlocks.SUPER_EXPERIENCE_BLOCK.get())
+                    .unlockedBy(
+                            "has_super_experience_block",
+                            has(CEIBlocks.SUPER_EXPERIENCE_BLOCK.get()))
+                    .save(output, key("crafting/super_experience_nugget"));
+
+            shaped(RecipeCategory.MISC, CEIBlocks.SUPER_EXPERIENCE_BLOCK.get())
+                    .define('n', CEIItems.SUPER_EXPERIENCE_NUGGET.get())
+                    .pattern("nnn")
+                    .pattern("nnn")
+                    .pattern("nnn")
+                    .unlockedBy(
+                            "has_super_experience_nugget",
+                            has(CEIItems.SUPER_EXPERIENCE_NUGGET.get()))
+                    .save(output, key("crafting/super_experience_block"));
+
+            save(
+                    "pressing/enchanting_template",
+                    new PressingRecipe(
+                            List.of(new ProcessingOutput(CEIItems.ENCHANTING_TEMPLATE.get(), 1)),
+                            Ingredient.of(AllBlocks.EXPERIENCE_BLOCK)));
+            save(
+                    "pressing/super_enchanting_template",
+                    new PressingRecipe(
+                            List.of(new ProcessingOutput(CEIItems.SUPER_ENCHANTING_TEMPLATE.get(), 1)),
+                            Ingredient.of(CEIBlocks.SUPER_EXPERIENCE_BLOCK.get())));
+
+            shapeless(RecipeCategory.MISC, CEIItems.BLAZES_ENCHANTING_HANDBOOK.get())
+                    .requires(CDPItems.BLAZE_UPGRADE_SMITHING_TEMPLATE.get())
+                    .requires(AllItems.STURDY_SHEET, 2)
+                    .requires(Items.EXPERIENCE_BOTTLE, 2)
+                    .requires(Blocks.MAGMA_BLOCK)
+                    .unlockedBy("has_blaze_burner", has(AllBlocks.BLAZE_BURNER))
+                    .save(output, key("crafting/blazes_enchanting_handbook"));
+
+            save(
+                    "compacting/experience_cake_base",
+                    compacting(
+                            List.of(new ProcessingOutput(CEIItems.EXPERIENCE_CAKE_BASE.get(), 1)),
+                            List.of(
+                                    sized(tag(EGGS), 1),
+                                    sized(Ingredient.of(Items.SUGAR), 1),
+                                    sized(Ingredient.of(Items.LAPIS_LAZULI), 1)),
+                            List.of()));
+            save(
+                    "filling/experience_cake",
+                    new FillingRecipe(
+                            CEIItems.EXPERIENCE_CAKE.get().getDefaultInstance(),
+                            Ingredient.of(CEIItems.EXPERIENCE_CAKE_BASE.get()),
+                            experienceIngredient(1000)));
+            save(
+                    "cutting/experience_cake_slice",
+                    new CuttingRecipe(
+                            50,
+                            List.of(new ProcessingOutput(CEIItems.EXPERIENCE_CAKE_SLICE.get(), 4)),
+                            Ingredient.of(CEIItems.EXPERIENCE_CAKE.get())));
+        }
+
+        private void buildExperienceRecipes() {
+            save(
+                    "compacting/experience_block",
+                    compacting(
+                            List.of(new ProcessingOutput(AllBlocks.EXPERIENCE_BLOCK, 1)),
+                            List.of(),
+                            List.of(experienceIngredient(27))));
+            save(
+                    "filling/experience_bottle",
+                    new FillingRecipe(
+                            Items.EXPERIENCE_BOTTLE.getDefaultInstance(),
+                            Ingredient.of(Items.GLASS_BOTTLE),
+                            experienceIngredient(10)));
+            save(
+                    "emptying/experience_bottle",
+                    new EmptyingRecipe(
+                            Items.GLASS_BOTTLE.getDefaultInstance(),
+                            experienceStack(10),
+                            Ingredient.of(Items.EXPERIENCE_BOTTLE)));
+
+            save(
+                    "grinding/experience_nugget",
+                    GrindingRecipe.builder(CEICommon.asResource("experience_nugget"))
+                            .require(AllItems.EXP_NUGGET)
+                            .output(CEIFluids.EXPERIENCE.getSource(), fluidAmount(3))
+                            .build()
+                            .value());
+            save(
+                    "grinding/experience_block",
+                    GrindingRecipe.builder(CEICommon.asResource("experience_block"))
+                            .require(AllBlocks.EXPERIENCE_BLOCK)
+                            .output(CEIFluids.EXPERIENCE.getSource(), fluidAmount(27))
+                            .build()
+                            .value());
+            save(
+                    "grinding/super_experience_nugget",
+                    GrindingRecipe.builder(CEIItems.SUPER_EXPERIENCE_NUGGET.getId())
+                            .require(CEIItems.SUPER_EXPERIENCE_NUGGET.get())
+                            .output(CEIFluids.EXPERIENCE.getSource(), fluidAmount(3))
+                            .build()
+                            .value());
+            save(
+                    "grinding/super_experience_block",
+                    GrindingRecipe.builder(CEIBlocks.SUPER_EXPERIENCE_BLOCK.getId())
+                            .require(CEIBlocks.SUPER_EXPERIENCE_BLOCK.get())
+                            .output(CEIFluids.EXPERIENCE.getSource(), fluidAmount(27))
+                            .build()
+                            .value());
+
+            save(
+                    "crushing/infested_cobblestone",
+                    new CrushingRecipe(
+                            100,
+                            List.of(
+                                    new ProcessingOutput(Blocks.GRAVEL, 1),
+                                    new ProcessingOutput(AllItems.EXP_NUGGET, 1, .5F)),
+                            Ingredient.of(Blocks.INFESTED_COBBLESTONE)));
+            save(
+                    "compacting/infested_stone",
+                    compacting(
+                            List.of(
+                                    new ProcessingOutput(Blocks.STONE_BRICKS, 1),
+                                    new ProcessingOutput(AllItems.EXP_NUGGET, 1)),
+                            List.of(sized(Ingredient.of(Blocks.INFESTED_STONE), 4)),
+                            List.of()));
+        }
+
+        private void smithing(String path, ItemLike addition, Item result) {
+            SmithingTransformRecipeBuilder.smithing(
+                    Ingredient.of(CDPItems.BLAZE_UPGRADE_SMITHING_TEMPLATE.get()),
+                    Ingredient.of(AllBlocks.BLAZE_BURNER),
+                    Ingredient.of(addition),
+                    RecipeCategory.MISC,
+                    result)
+                    .unlocks("has_blaze_burner", has(AllBlocks.BLAZE_BURNER))
+                    .save(output, key(path));
+        }
+
+        private void save(String path, Recipe<?> recipe) {
+            output.accept(key(path), recipe, null);
+        }
+
+        private static CompactingRecipe compacting(
+                List<ProcessingOutput> results,
+                List<SizedIngredient> ingredients,
+                List<FluidIngredient> fluids) {
+            return new CompactingRecipe(results, HeatCondition.NONE, fluids, ingredients);
+        }
+
+        private static SizedIngredient sized(Ingredient ingredient, int count) {
+            return new SizedIngredient(ingredient, count);
+        }
+
+        private static FluidStackIngredient experienceIngredient(long millibuckets) {
+            return new FluidStackIngredient(
+                    CEIFluids.EXPERIENCE.getSource(), DataComponentPatch.EMPTY, Math.toIntExact(CEIFluidUnits.millibuckets(millibuckets)));
+        }
+
+        private static FluidStack experienceStack(long millibuckets) {
+            return new FluidStack(
+                    CEIFluids.EXPERIENCE.getSource(), Math.toIntExact(CEIFluidUnits.millibuckets(millibuckets)));
+        }
+
+        private static int fluidAmount(long millibuckets) {
+            return Math.toIntExact(CEIFluidUnits.millibuckets(millibuckets));
+        }
+
+        private static ResourceKey<Recipe<?>> key(String path) {
+            return ResourceKey.create(Registries.RECIPE, CEICommon.asResource(path));
+        }
+
+        private static TagKey<Item> itemTag(String namespace, String path) {
+            return TagKey.create(
+                    Registries.ITEM, Identifier.fromNamespaceAndPath(namespace, path));
+        }
     }
 }

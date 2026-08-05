@@ -18,20 +18,23 @@
 
 package plus.dragons.createenchantmentindustry.common.kinetics.grindstone;
 
-import com.simibubi.create.AllBlocks;
-import com.simibubi.create.AllShapes;
-import com.simibubi.create.api.schematic.requirement.SpecialBlockItemRequirement;
-import com.simibubi.create.content.fluids.pipes.FluidPipeBlock;
-import com.simibubi.create.content.kinetics.base.HorizontalKineticBlock;
-import com.simibubi.create.content.schematics.requirement.ItemRequirement;
-import com.simibubi.create.foundation.block.IBE;
+import com.zurrtum.create.AllBlocks;
+import com.zurrtum.create.AllShapes;
+import com.zurrtum.create.api.schematic.requirement.SpecialBlockItemRequirement;
+import com.zurrtum.create.catnip.data.Iterate;
+import com.zurrtum.create.content.fluids.pipes.FluidPipeBlock;
+import com.zurrtum.create.content.kinetics.base.HorizontalKineticBlock;
+import com.zurrtum.create.content.schematics.requirement.ItemRequirement;
+import com.zurrtum.create.foundation.block.IBE;
 import java.util.List;
-import net.createmod.catnip.data.Iterate;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
+import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -45,13 +48,10 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.items.IItemHandler;
 import org.jetbrains.annotations.Nullable;
-import plus.dragons.createdragonsplus.common.advancements.AdvancementBehaviour;
+import plus.dragons.createenchantmentindustry.common.advancement.AdvancementBehaviour;
 import plus.dragons.createenchantmentindustry.common.registry.CEIBlockEntities;
 
 public class GrindstoneDrainBlock extends HorizontalKineticBlock implements IBE<GrindstoneDrainBlockEntity>, SpecialBlockItemRequirement {
@@ -66,17 +66,33 @@ public class GrindstoneDrainBlock extends HorizontalKineticBlock implements IBE<
     }
 
     @Override
-    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
+    protected InteractionResult useWithoutItem(
+            BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
         if (hitResult.getDirection() == Direction.UP)
-            return this.grindstone.useItemOn(stack, state, level, pos, player, hand, hitResult);
+            return this.grindstone.interact(
+                    state, level, pos, player, InteractionHand.MAIN_HAND, ItemStack.EMPTY, hitResult);
+        return super.useWithoutItem(state, level, pos, player, hitResult);
+    }
+
+    @Override
+    protected InteractionResult useItemOn(
+            ItemStack stack,
+            BlockState state,
+            Level level,
+            BlockPos pos,
+            Player player,
+            InteractionHand hand,
+            BlockHitResult hitResult) {
+        if (hitResult.getDirection() == Direction.UP)
+            return this.grindstone.interact(state, level, pos, player, hand, stack, hitResult);
         return super.useItemOn(stack, state, level, pos, player, hand, hitResult);
     }
 
     @Override
-    public void updateEntityAfterFallOn(BlockGetter worldIn, Entity entityIn) {
-        super.updateEntityAfterFallOn(worldIn, entityIn);
+    public void updateEntityMovementAfterFallOn(BlockGetter worldIn, Entity entityIn) {
+        super.updateEntityMovementAfterFallOn(worldIn, entityIn);
 
-        if (entityIn.level().isClientSide)
+        if (entityIn.level().isClientSide())
             return;
         if (!(entityIn instanceof ItemEntity itemEntity))
             return;
@@ -86,21 +102,26 @@ public class GrindstoneDrainBlock extends HorizontalKineticBlock implements IBE<
         if (drain == null)
             return;
 
-        IItemHandler capability = drain.getLevel().getCapability(Capabilities.ItemHandler.BLOCK, drain.getBlockPos(), null);
+        Storage<ItemVariant> capability = drain.getItemStorage(null);
         if (capability == null)
             return;
 
-        ItemStack remainder = capability
-                .insertItem(0, itemEntity.getItem(), false);
-        if (remainder.isEmpty())
-            itemEntity.discard();
-        if (remainder.getCount() < itemEntity.getItem()
-                .getCount())
-            itemEntity.setItem(remainder);
+        ItemStack original = itemEntity.getItem();
+        long inserted;
+        try (Transaction transaction = Transaction.openOuter()) {
+            inserted = capability.insert(ItemVariant.of(original), original.getCount(), transaction);
+            if (inserted == 0)
+                return;
+            transaction.commit();
+        }
+        ItemStack remainder = original.copy();
+        remainder.shrink(Math.toIntExact(inserted));
+        if (remainder.isEmpty()) itemEntity.discard();
+        else itemEntity.setItem(remainder);
     }
 
     @Override
-    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return SHAPE;
     }
 
@@ -135,8 +156,8 @@ public class GrindstoneDrainBlock extends HorizontalKineticBlock implements IBE<
     }
 
     @Override
-    public ItemStack getCloneItemStack(BlockState state, HitResult hitResult, LevelReader level, BlockPos pos, Player player) {
-        return AllBlocks.ITEM_DRAIN.asStack();
+    protected ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state, boolean includeData) {
+        return new ItemStack(AllBlocks.ITEM_DRAIN);
     }
 
     @Override
@@ -158,6 +179,7 @@ public class GrindstoneDrainBlock extends HorizontalKineticBlock implements IBE<
     public ItemRequirement getRequiredItems(BlockState state, @Nullable BlockEntity blockEntity) {
         return new ItemRequirement(List.of(
                 new ItemRequirement.StackRequirement(new ItemStack(grindstone), ItemRequirement.ItemUseType.CONSUME),
-                new ItemRequirement.StackRequirement(AllBlocks.ITEM_DRAIN.asStack(), ItemRequirement.ItemUseType.CONSUME)));
+                new ItemRequirement.StackRequirement(
+                        new ItemStack(AllBlocks.ITEM_DRAIN), ItemRequirement.ItemUseType.CONSUME)));
     }
 }

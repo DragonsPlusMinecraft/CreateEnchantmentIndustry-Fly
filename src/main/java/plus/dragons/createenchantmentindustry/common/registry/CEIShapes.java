@@ -18,8 +18,8 @@
 
 package plus.dragons.createenchantmentindustry.common.registry;
 
-import com.simibubi.create.AllShapes;
-import net.createmod.catnip.math.VoxelShaper;
+import com.zurrtum.create.AllShapes;
+import com.zurrtum.create.catnip.math.VoxelShaper;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.shapes.VoxelShape;
 

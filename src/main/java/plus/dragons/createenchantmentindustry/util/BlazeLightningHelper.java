@@ -21,9 +21,10 @@ package plus.dragons.createenchantmentindustry.util;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.TagKey;
+import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.village.poi.PoiManager;
 import net.minecraft.world.entity.ai.village.poi.PoiType;
@@ -37,10 +38,10 @@ public class BlazeLightningHelper {
     public static final String LIGHTNING_BOLT_EXPERIENCE_CHARGE_KEY = "ExperienceCharge";
     public static final TagKey<Block> LIGHTNING_ROD_BLOCKS = TagKey.create(
             Registries.BLOCK,
-            ResourceLocation.fromNamespaceAndPath("c", "lightning_rods"));
+            Identifier.fromNamespaceAndPath("c", "lightning_rods"));
     public static final TagKey<PoiType> LIGHTNING_ROD_POINT_OF_INTEREST_TYPES = TagKey.create(
             Registries.POINT_OF_INTEREST_TYPE,
-            ResourceLocation.fromNamespaceAndPath("c", "lightning_rods"));
+            Identifier.fromNamespaceAndPath("c", "lightning_rods"));
 
     private BlazeLightningHelper() {}
 
@@ -59,10 +60,10 @@ public class BlazeLightningHelper {
 
     @SuppressWarnings("all")
     public static boolean strikeLightning(ServerLevel level, BlockPos strikePos) {
-        var lightning = EntityType.LIGHTNING_BOLT.create(level);
+        var lightning = EntityType.LIGHTNING_BOLT.create(level, EntitySpawnReason.TRIGGERED);
         if (lightning == null)
             return false;
-        lightning.getPersistentData().putBoolean(LIGHTNING_BOLT_EXPERIENCE_CHARGE_KEY, true);
+        lightning.addTag(LIGHTNING_BOLT_EXPERIENCE_CHARGE_KEY);
         Optional<BlockPos> rodPos = level.getPoiManager().findAll(
                 poi -> poi.is(LIGHTNING_ROD_POINT_OF_INTEREST_TYPES),
                 pos -> pos.getY() == level.getHeight(Heightmap.Types.WORLD_SURFACE, pos.getX(), pos.getZ()) - 1,
@@ -71,7 +72,7 @@ public class BlazeLightningHelper {
                 PoiManager.Occupancy.ANY).unordered().findAny();
         if (rodPos.isEmpty())
             rodPos = findTaggedLightningRod(level, strikePos, 128);
-        lightning.moveTo(Vec3.atBottomCenterOf(rodPos.orElse(strikePos).above()));
+        lightning.snapTo(Vec3.atBottomCenterOf(rodPos.orElse(strikePos).above()));
         level.addFreshEntity(lightning);
         return rodPos.isEmpty();
     }

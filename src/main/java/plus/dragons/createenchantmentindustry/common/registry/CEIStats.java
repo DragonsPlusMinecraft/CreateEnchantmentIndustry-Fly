@@ -18,43 +18,32 @@
 
 package plus.dragons.createenchantmentindustry.common.registry;
 
-import static plus.dragons.createenchantmentindustry.common.CEICommon.REGISTRATE;
-
-import com.tterrag.registrate.util.entry.RegistryEntry;
-import net.minecraft.resources.ResourceLocation;
-import net.neoforged.bus.api.IEventBus;
-import plus.dragons.createdragonsplus.common.CDPRegistrate;
-import plus.dragons.createdragonsplus.common.registrate.builder.CustomStatBuilder;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.stats.StatFormatter;
+import net.minecraft.stats.Stats;
 import plus.dragons.createenchantmentindustry.common.CEICommon;
 
-public class CEIStats {
-    public static final RegistryEntry<ResourceLocation, ResourceLocation> GRINDSTONE_EXPERIENCE = create("mechanical_grindstone_experience")
-            .lang("Experience Produced (by Mechanical Grindstone)")
-            .register();
+public final class CEIStats {
+    public static final CEIRegistryEntry<Identifier> GRINDSTONE_EXPERIENCE = register(
+            "mechanical_grindstone_experience");
+    public static final CEIRegistryEntry<Identifier> SUPER_ENCHANT = register("super_enchant");
+    public static final CEIRegistryEntry<Identifier> PRINT = register("print");
+    public static final CEIRegistryEntry<Identifier> FORGE = register("forge");
+    public static final CEIRegistryEntry<Identifier> ENCHANT = register("enchant");
+    public static final CEIRegistryEntry<Identifier> CLASSIC_ENCHANT = register("classic_enchant");
 
-    public static final RegistryEntry<ResourceLocation, ResourceLocation> SUPER_ENCHANT = create("super_enchant")
-            .lang("Super Enchant")
-            .register();
+    private CEIStats() {}
 
-    public static final RegistryEntry<ResourceLocation, ResourceLocation> PRINT = create("print")
-            .lang("Printer Used")
-            .register();
-
-    public static final RegistryEntry<ResourceLocation, ResourceLocation> FORGE = create("forge")
-            .lang("Blaze Forger Used")
-            .register();
-
-    public static final RegistryEntry<ResourceLocation, ResourceLocation> ENCHANT = create("enchant")
-            .lang("Blaze Enchanter Used")
-            .register();
-
-    public static final RegistryEntry<ResourceLocation, ResourceLocation> CLASSIC_ENCHANT = create("classic_enchant")
-            .lang("Classic Blaze Enchanter Used")
-            .register();
-
-    private static CustomStatBuilder<CDPRegistrate> create(String id) {
-        return REGISTRATE.customStat(id, () -> CEICommon.asResource(id));
+    public static void register() {
+        // Class initialization performs registration.
     }
 
-    public static void register(IEventBus modBus) {}
+    private static CEIRegistryEntry<Identifier> register(String path) {
+        Identifier id = CEICommon.asResource(path);
+        Registry.register(BuiltInRegistries.CUSTOM_STAT, id, id);
+        Stats.CUSTOM.get(id, StatFormatter.DEFAULT);
+        return new CEIRegistryEntry<>(id, id);
+    }
 }

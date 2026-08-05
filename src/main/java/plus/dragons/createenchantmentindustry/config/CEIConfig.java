@@ -18,35 +18,66 @@
 
 package plus.dragons.createenchantmentindustry.config;
 
-import net.minecraft.Util;
-import net.minecraft.util.Unit;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.config.ModConfig.Type;
-import net.neoforged.fml.event.config.ModConfigEvent;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import com.zurrtum.create.catnip.config.Builder;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import plus.dragons.createenchantmentindustry.common.CEICommon;
 
-public class CEIConfig {
+/** Owns the process-wide config instances used by Create Fly's JSON config builder. */
+public final class CEIConfig {
     private static final CEICommonConfig COMMON_CONFIG = new CEICommonConfig();
-    private static final CEIClientConfig CLIENT_CONFIG = new CEIClientConfig();
     private static final CEIServerConfig SERVER_CONFIG = new CEIServerConfig();
-    private static ModConfigSpec COMMON_SPEC;
-    private static ModConfigSpec CLIENT_SPEC;
-    private static ModConfigSpec SERVER_SPEC;
+    private static CEIClientConfig clientConfig;
+    private static CEIServerConfigSnapshot localServerSnapshot;
+    private static boolean registered;
 
-    public CEIConfig(ModContainer modContainer) {
-        COMMON_SPEC = Util.make(new ModConfigSpec.Builder().configure(builder -> {
-            COMMON_CONFIG.registerAll(builder);
-            return Unit.INSTANCE;
-        }).getValue(), spec -> modContainer.registerConfig(Type.COMMON, spec));
-        CLIENT_SPEC = Util.make(new ModConfigSpec.Builder().configure(builder -> {
-            CLIENT_CONFIG.registerAll(builder);
-            return Unit.INSTANCE;
-        }).getValue(), spec -> modContainer.registerConfig(Type.CLIENT, spec));
-        SERVER_SPEC = Util.make(new ModConfigSpec.Builder().configure(builder -> {
-            SERVER_CONFIG.registerAll(builder);
-            return Unit.INSTANCE;
-        }).getValue(), spec -> modContainer.registerConfig(Type.SERVER, spec));
+    private CEIConfig() {}
+
+    public static synchronized void register() {
+        if (registered) {
+            return;
+        }
+        registered = true;
+        Builder.create(() -> COMMON_CONFIG, CEICommon.ID, "common");
+        reloadServer();
+        ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resources, success) -> {
+            if (success) {
+                reloadServer();
+            }
+        });
+    }
+
+    /** Called exclusively by the Fabric client entrypoint. */
+    public static synchronized CEIClientConfig initializeClient() {
+        if (clientConfig == null) {
+            clientConfig = new CEIClientConfig();
+            Builder.create(() -> clientConfig, CEICommon.ID, "client");
+        }
+        return clientConfig;
+    }
+
+    public static synchronized void reloadServer() {
+        // Re-registering the same object is required by p2 StressConfig's provider identity guard.
+        SERVER_CONFIG.prepareReload();
+        Builder.create(() -> SERVER_CONFIG, CEICommon.ID, "server");
+    }
+
+    public static synchronized CEIServerConfigSnapshot captureServerSnapshot() {
+        return CEIServerConfigSnapshot.capture(SERVER_CONFIG);
+    }
+
+    /** Applies remote values in memory without replacing or writing the client's local server config. */
+    public static synchronized void applyServerSnapshot(CEIServerConfigSnapshot snapshot) {
+        if (localServerSnapshot == null) {
+            localServerSnapshot = captureServerSnapshot();
+        }
+        snapshot.applyTo(SERVER_CONFIG);
+    }
+
+    public static synchronized void clearServerSnapshot() {
+        if (localServerSnapshot != null) {
+            localServerSnapshot.applyTo(SERVER_CONFIG);
+            localServerSnapshot = null;
+        }
     }
 
     public static CEICommonConfig common() {
@@ -54,7 +85,10 @@ public class CEIConfig {
     }
 
     public static CEIClientConfig client() {
-        return CLIENT_CONFIG;
+        if (clientConfig == null) {
+            throw new IllegalStateException("Client config is unavailable before CEIClient initialization");
+        }
+        return clientConfig;
     }
 
     public static CEIServerConfig server() {
@@ -83,29 +117,5 @@ public class CEIConfig {
 
     public static CEIFeaturesConfig features() {
         return COMMON_CONFIG.features;
-    }
-
-    @SubscribeEvent
-    public void onLoad(ModConfigEvent.Loading event) {
-        var spec = event.getConfig().getSpec();
-        if (COMMON_SPEC == spec) {
-            COMMON_CONFIG.onLoad();
-        } else if (SERVER_SPEC == spec) {
-            SERVER_CONFIG.onLoad();
-        } else if (CLIENT_SPEC == spec) {
-            CLIENT_CONFIG.onLoad();
-        }
-    }
-
-    @SubscribeEvent
-    public void onReload(ModConfigEvent.Reloading event) {
-        var spec = event.getConfig().getSpec();
-        if (COMMON_SPEC == spec) {
-            COMMON_CONFIG.onReload();
-        } else if (SERVER_SPEC == spec) {
-            SERVER_CONFIG.onReload();
-        } else if (CLIENT_SPEC == spec) {
-            CLIENT_CONFIG.onReload();
-        }
     }
 }

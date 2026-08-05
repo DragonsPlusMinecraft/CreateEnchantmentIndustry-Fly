@@ -1,18 +1,12 @@
 {
-    "type": "create:filling",
-    "ingredients": [
-        {
-            "item": "create_enchantment_industry:experience_cake_base"
-        },
-        {
-            "type": "neoforge:single",
-            "amount": 1000,
-            "fluid": "create_enchantment_industry:experience"
-        }
-    ],
-    "results": [
-        {
-            "id": "create_enchantment_industry:experience_cake"
-        }
-    ]
+  "type": "create:filling",
+  "fluid_ingredient": {
+    "type": "fluid_stack",
+    "fluid": "create_enchantment_industry:experience"
+  },
+  "ingredient": "create_enchantment_industry:experience_cake_base",
+  "result": {
+    "count": 1,
+    "id": "create_enchantment_industry:experience_cake"
+  }
 }

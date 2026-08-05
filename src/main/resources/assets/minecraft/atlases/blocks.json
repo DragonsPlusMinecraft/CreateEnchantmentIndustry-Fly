@@ -1,40 +1,16 @@
-﻿{
-    "sources":  [
-                    {
-                        "type":  "single",
-                        "resource":  "create_enchantment_industry:fluid/experience_still"
-                    },
-                    {
-                        "type":  "single",
-                        "resource":  "create_enchantment_industry:fluid/experience_flow"
-                    },
-                    {
-                        "type":  "single",
-                        "resource":  "create_enchantment_industry:fluid/infused_dragon_breath_flow"
-                    },
-                    {
-                        "type":  "single",
-                        "resource":  "create_enchantment_industry:fluid/infused_dragon_breath_still"
-                    },
-                    {
-                        "type":  "single",
-                        "resource":  "create_enchantment_industry:fluid/crystal_essence_flow"
-                    },
-                    {
-                        "type":  "single",
-                        "resource":  "create_enchantment_industry:fluid/crystal_essence_still"
-                    },
-                    {
-                        "type":  "single",
-                        "resource":  "create_enchantment_industry:fluid/apotheotic_essence_flow"
-                    },
-                    {
-                        "type":  "single",
-                        "resource":  "create_enchantment_industry:fluid/apotheotic_essence_still"
-                    },
-                    {
-                        "type":  "single",
-                        "resource":  "create_enchantment_industry:block/blaze_enchanter_book"
-                    }
-                ]
+{
+  "sources": [
+    {
+      "type": "single",
+      "resource": "create_enchantment_industry:fluid/experience_still"
+    },
+    {
+      "type": "single",
+      "resource": "create_enchantment_industry:fluid/experience_flow"
+    },
+    {
+      "type": "single",
+      "resource": "create_enchantment_industry:block/blaze_enchanter_book"
+    }
+  ]
 }

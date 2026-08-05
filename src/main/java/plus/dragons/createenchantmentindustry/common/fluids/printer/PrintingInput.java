@@ -18,22 +18,45 @@
 
 package plus.dragons.createenchantmentindustry.common.fluids.printer;
 
+import com.zurrtum.create.infrastructure.fluids.FluidStack;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeInput;
-import net.neoforged.neoforge.fluids.FluidStack;
 
-public record PrintingInput(ItemStack base, ItemStack template, FluidStack fluid) implements RecipeInput {
-    @Override
-    public ItemStack getItem(int index) {
-        if (index == 0)
-            return base;
-        if (index == 1)
-            return template;
-        throw new IllegalArgumentException("No item for index " + index);
+/** Immutable two-item recipe input with an additional fluid stack. */
+public final class PrintingInput implements RecipeInput {
+    private final ItemStack base;
+    private final ItemStack template;
+    private final FluidStack fluid;
+
+    public PrintingInput(ItemStack base, ItemStack template, FluidStack fluid) {
+        this.base = base;
+        this.template = template;
+        this.fluid = fluid;
+    }
+
+    public ItemStack base() {
+        return base;
+    }
+
+    public ItemStack template() {
+        return template;
+    }
+
+    public FluidStack fluid() {
+        return fluid;
     }
 
     @Override
     public int size() {
         return 2;
+    }
+
+    @Override
+    public ItemStack getItem(int slot) {
+        return switch (slot) {
+            case 0 -> base;
+            case 1 -> template;
+            default -> ItemStack.EMPTY;
+        };
     }
 }

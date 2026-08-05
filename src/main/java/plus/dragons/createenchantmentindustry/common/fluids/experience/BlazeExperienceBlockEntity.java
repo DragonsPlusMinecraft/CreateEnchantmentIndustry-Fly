@@ -18,21 +18,18 @@
 
 package plus.dragons.createenchantmentindustry.common.fluids.experience;
 
-import com.simibubi.create.api.equipment.goggles.IHaveGoggleInformation;
-import com.simibubi.create.content.fluids.tank.CreativeFluidTankBlockEntity.CreativeSmartFluidTank;
-import com.simibubi.create.content.processing.burner.BlazeBurnerBlock.HeatLevel;
-import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
-import com.simibubi.create.foundation.fluid.SmartFluidTank;
-import com.simibubi.create.foundation.utility.CreateLang;
+import com.zurrtum.create.api.behaviour.BlockEntityBehaviour;
+import com.zurrtum.create.content.processing.burner.BlazeBurnerBlock.HeatLevel;
+import com.zurrtum.create.foundation.blockEntity.behaviour.fluid.SmartFluidTankBehaviour;
+import com.zurrtum.create.foundation.blockEntity.behaviour.fluid.SmartFluidTankBehaviour.TankSegment;
+import com.zurrtum.create.infrastructure.fluids.FluidStack;
+import com.zurrtum.create.infrastructure.transfer.FluidInventoryStorage;
 import java.util.List;
-import java.util.function.Consumer;
-import net.createmod.catnip.lang.LangBuilder;
-import net.minecraft.ChatFormatting;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
+import net.fabricmc.fabric.api.transfer.v1.storage.base.CombinedStorage;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.core.HolderLookup.Provider;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.Component;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -41,149 +38,153 @@ import net.minecraft.world.entity.ai.village.poi.PoiType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import org.jetbrains.annotations.Nullable;
-import plus.dragons.createdragonsplus.common.fluids.tank.ConfigurableFluidTank;
-import plus.dragons.createdragonsplus.common.fluids.tank.FluidTankBehaviour;
 import plus.dragons.createdragonsplus.common.processing.blaze.BlazeBlockEntity;
-import plus.dragons.createdragonsplus.util.FieldsNullabilityUnknownByDefault;
 import plus.dragons.createenchantmentindustry.common.registry.CEIFluids;
 import plus.dragons.createenchantmentindustry.util.BlazeLightningHelper;
-import plus.dragons.createenchantmentindustry.util.CEILang;
+import plus.dragons.createenchantmentindustry.util.CEIFluidUnits;
 
-@FieldsNullabilityUnknownByDefault
-public abstract class BlazeExperienceBlockEntity extends BlazeBlockEntity implements IHaveGoggleInformation {
+public abstract class BlazeExperienceBlockEntity extends BlazeBlockEntity {
     public static final String LIGHTNING_BOLT_EXPERIENCE_CHARGE_KEY = BlazeLightningHelper.LIGHTNING_BOLT_EXPERIENCE_CHARGE_KEY;
     public static final TagKey<Block> LIGHTNING_ROD_BLOCKS = BlazeLightningHelper.LIGHTNING_ROD_BLOCKS;
     public static final TagKey<PoiType> LIGHTNING_ROD_POINT_OF_INTEREST_TYPES = BlazeLightningHelper.LIGHTNING_ROD_POINT_OF_INTEREST_TYPES;
-    private boolean isCreative;
-    protected FluidTankBehaviour tanks;
+
+    private boolean creative;
+    protected CEIExperienceTankBehaviour normalTank;
+    protected CEIExperienceTankBehaviour specialTank;
 
     public BlazeExperienceBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
     }
 
-    protected abstract ConfigurableFluidTank createNormalTank(Consumer<FluidStack> fluidUpdateCallback);
-
-    protected abstract ConfigurableFluidTank createSpecialTank(Consumer<FluidStack> fluidUpdateCallback);
+    protected abstract int getExperienceTankCapacity();
 
     @Override
-    public void addBehaviours(List<BlockEntityBehaviour> behaviours) {
-        tanks = new FluidTankBehaviour(this, List.of(this::createNormalTank, this::createSpecialTank), false);
-        behaviours.add(tanks);
+    public void addBehaviours(List<BlockEntityBehaviour<?>> behaviours) {
+        int capacity = Math.toIntExact(CEIFluidUnits.millibuckets(getExperienceTankCapacity()));
+        normalTank = new CEIExperienceTankBehaviour(SmartFluidTankBehaviour.INPUT, this, capacity, true);
+        specialTank = new CEIExperienceTankBehaviour(SmartFluidTankBehaviour.OUTPUT, this, capacity, false);
+        behaviours.add(normalTank);
+        behaviours.add(specialTank);
     }
 
     @Override
     public boolean isCreative() {
-        return isCreative;
+        return creative;
     }
 
     @Override
     public HeatLevel getHeatLevel() {
-        if (getSpecialExperience() > 0)
+        if (getSpecialExperience() > 0) {
             return HeatLevel.SEETHING;
-        double experience = getNormalExperience();
-        if (experience > 0) {
-            boolean lowPercent = experience / getNormalTank().getCapacity() < 0.0125;
-            return lowPercent ? HeatLevel.FADING : HeatLevel.KINDLED;
+        }
+        TankSegment tank = getNormalTank();
+        if (!tank.getFluid().isEmpty()) {
+            double fill = tank.getFluid().getAmount() / (double) tank.getMaxAmountPerStack();
+            return fill < 0.0125 ? HeatLevel.FADING : HeatLevel.KINDLED;
         }
         return HeatLevel.SMOULDERING;
     }
 
     @Override
-    protected void write(CompoundTag compound, Provider registries, boolean clientPacket) {
-        super.write(compound, registries, clientPacket);
-        compound.putBoolean("isCreative", isCreative);
+    protected void write(ValueOutput output, boolean clientPacket) {
+        super.write(output, clientPacket);
+        output.putBoolean("isCreative", creative);
     }
 
     @Override
-    protected void read(CompoundTag compound, HolderLookup.Provider registries, boolean clientPacket) {
-        super.read(compound, registries, clientPacket);
-        isCreative = compound.getBoolean("isCreative");
-        if (isCreative)
+    protected void read(ValueInput input, boolean clientPacket) {
+        super.read(input, clientPacket);
+        creative = input.getBooleanOr("isCreative", false);
+        if (creative && normalTank != null && specialTank != null) {
             setCreativeTanks(getHeatLevelFromBlock());
+        }
     }
 
-    public SmartFluidTank getNormalTank() {
-        return tanks.getHandlers()[0];
+    public TankSegment getNormalTank() {
+        return normalTank.getPrimaryHandler();
     }
 
-    public SmartFluidTank getSpecialTank() {
-        return tanks.getHandlers()[1];
+    public TankSegment getSpecialTank() {
+        return specialTank.getPrimaryHandler();
     }
 
     public int getNormalExperience() {
-        return getNormalTank().getFluid().getAmount();
+        return Math.toIntExact(CEIFluidUnits.toMillibuckets(getNormalTank().getFluid().getAmount()));
     }
 
     public int getSpecialExperience() {
-        return getSpecialTank().getFluid().getAmount();
+        return Math.toIntExact(CEIFluidUnits.toMillibuckets(getSpecialTank().getFluid().getAmount()));
     }
 
     public int getTotalExperience() {
         return getNormalExperience() + getSpecialExperience();
     }
 
+    public @Nullable Storage<FluidVariant> getFluidStorage(@Nullable Direction side) {
+        if (normalTank == null || specialTank == null || isRemoved() || side != null && side != Direction.DOWN) {
+            return null;
+        }
+        return new CombinedStorage<>(List.of(
+                FluidInventoryStorage.of(normalTank.getCapability(), side),
+                FluidInventoryStorage.of(specialTank.getCapability(), side)));
+    }
+
     public boolean consumeExperience(int amount, boolean special, boolean simulate) {
-        var fluid = new FluidStack(CEIFluids.EXPERIENCE, amount);
-        var tank = special ? getSpecialTank() : tanks.getCapability();
-        var drained = tank.drain(fluid, FluidAction.SIMULATE);
-        if (drained.getAmount() != amount)
-            return false;
-        if (!simulate)
-            tank.drain(fluid, FluidAction.EXECUTE);
-        return true;
+        FluidStack fluid = CEIFluidUnits.stack(CEIFluids.EXPERIENCE.getSource(), amount);
+        CEIExperienceTankBehaviour tank = special ? specialTank : normalTank;
+        return tank.extractExperience(fluid, simulate) == fluid.getAmount();
     }
 
     public boolean applyExperienceFuel(ExperienceFuel fuel, boolean forceOverflow, boolean simulate) {
-        assert level != null;
-        if (isCreative)
-            return false;
-        boolean special = fuel.special();
-        var tank = special ? getSpecialTank() : getNormalTank();
-        if (!(tank instanceof ConfigurableFluidTank configurableTank)) {
+        if (level == null || creative) {
             return false;
         }
-        var fluid = configurableTank.getFluid();
-        if (!fluid.isEmpty() && !fluid.is(CEIFluids.EXPERIENCE))
+        CEIExperienceTankBehaviour tank = fuel.special() ? specialTank : normalTank;
+        FluidStack experience = CEIFluidUnits.stack(CEIFluids.EXPERIENCE.getSource(), fuel.experience());
+        int inserted = tank.insertExperience(experience, true);
+        if (inserted == 0 || inserted != experience.getAmount() && !forceOverflow) {
             return false;
-        int experience = fuel.experience();
-        var experienceFluid = new FluidStack(CEIFluids.EXPERIENCE, experience);
-        int fill = configurableTank.fill(experienceFluid, FluidAction.SIMULATE, true);
-        if (fill == 0)
-            return false;
-        else if (fill != experience && !forceOverflow)
-            return false;
-        if (simulate)
+        }
+        if (simulate) {
             return true;
-        if (level.isClientSide)
-            spawnParticleBurst(special);
-        configurableTank.fill(experienceFluid, FluidAction.EXECUTE, true);
-
-        HeatLevel heat = getHeatLevelFromBlock();
+        }
+        tank.insertExperience(experience.copyWithAmount(inserted), false);
+        if (level.isClientSide()) {
+            spawnParticleBurst(fuel.special());
+        }
+        HeatLevel previous = getHeatLevelFromBlock();
         playSound();
         updateBlockState();
-
-        if (heat != getHeatLevelFromBlock())
-            level.playSound(null, worldPosition, SoundEvents.BLAZE_AMBIENT, SoundSource.BLOCKS,
+        if (previous != getHeatLevelFromBlock()) {
+            level.playSound(
+                    null,
+                    worldPosition,
+                    SoundEvents.BLAZE_AMBIENT,
+                    SoundSource.BLOCKS,
                     .125f + level.random.nextFloat() * .125f,
                     1.15f - level.random.nextFloat() * .25f);
+        }
         notifyUpdate();
         return true;
     }
 
     public void applyCreativeFuel() {
-        assert level != null;
-        isCreative = true;
+        if (level == null) {
+            return;
+        }
+        creative = true;
         HeatLevel next = getHeatLevelFromBlock().nextActiveLevel();
-        if (level.isClientSide) {
+        if (level.isClientSide()) {
             spawnParticleBurst(next.isAtLeast(HeatLevel.SEETHING));
             return;
         }
         playSound();
-        if (next == HeatLevel.FADING)
+        if (next == HeatLevel.FADING) {
             next = next.nextActiveLevel();
+        }
         setCreativeTanks(next);
         setBlockHeat(next);
         notifyUpdate();
@@ -192,58 +193,25 @@ public abstract class BlazeExperienceBlockEntity extends BlazeBlockEntity implem
     protected void setCreativeTanks(HeatLevel heatLevel) {
         switch (heatLevel) {
             case KINDLED -> {
-                int capacity = getNormalTank().getCapacity();
-                tanks.setTank(0, callback -> new CreativeSmartFluidTank(capacity, callback));
-                getNormalTank().setFluid(new FluidStack(CEIFluids.EXPERIENCE, capacity));
+                normalTank.setCreative(true);
+                specialTank.setCreative(false);
             }
             case SEETHING -> {
-                int capacity = getSpecialTank().getCapacity();
-                tanks.setTank(1, callback -> new CreativeSmartFluidTank(capacity, callback));
-                getSpecialTank().setFluid(new FluidStack(CEIFluids.EXPERIENCE, capacity));
+                normalTank.setCreative(true);
+                specialTank.setCreative(true);
             }
             default -> {
-                tanks.setTank(0, this::createNormalTank);
-                tanks.setTank(1, this::createSpecialTank);
+                normalTank.setCreative(false);
+                specialTank.setCreative(false);
             }
         }
     }
 
     protected @Nullable BlockPos getStrikePos() {
-        assert level != null;
-        return BlazeLightningHelper.getStrikePos(level, worldPosition);
+        return level == null ? null : BlazeLightningHelper.getStrikePos(level, worldPosition);
     }
 
     protected boolean strikeLightning(ServerLevel level, BlockPos strikePos) {
         return BlazeLightningHelper.strikeLightning(level, strikePos);
-    }
-
-    @Override
-    public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
-        LangBuilder mb = CreateLang.translate("generic.unit.millibuckets");
-        CreateLang.translate("gui.goggles.fluid_container")
-                .forGoggles(tooltip);
-        boolean special = false;
-        for (var tank : tanks.getHandlers()) {
-            CEILang.translate(special ? "gui.goggles.blaze_experience.super_experience" : "gui.goggles.blaze_experience.experience")
-                    .style(ChatFormatting.GRAY)
-                    .forGoggles(tooltip, 1);
-            CreateLang.builder()
-                    .add(CreateLang.number(tank.getFluid().getAmount())
-                            .add(mb)
-                            .style(special ? ChatFormatting.BLUE : ChatFormatting.GOLD))
-                    .text(ChatFormatting.GRAY, " / ")
-                    .add(CreateLang.number(tank.getCapacity())
-                            .add(mb)
-                            .style(ChatFormatting.DARK_GRAY))
-                    .forGoggles(tooltip, 2);
-            special = true;
-        }
-        return true;
-    }
-
-    @Override
-    public void invalidate() {
-        super.invalidate();
-        invalidateCapabilities();
     }
 }

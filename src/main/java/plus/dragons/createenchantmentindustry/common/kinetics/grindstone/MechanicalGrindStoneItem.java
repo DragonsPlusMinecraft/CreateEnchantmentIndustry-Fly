@@ -18,18 +18,19 @@
 
 package plus.dragons.createenchantmentindustry.common.kinetics.grindstone;
 
-import com.simibubi.create.AllBlocks;
-import com.simibubi.create.content.kinetics.base.HorizontalKineticBlock;
-import com.simibubi.create.content.kinetics.deployer.ManualApplicationRecipe;
+import com.zurrtum.create.AllBlocks;
+import com.zurrtum.create.content.kinetics.base.HorizontalKineticBlock;
+import com.zurrtum.create.content.kinetics.deployer.ManualApplicationRecipe;
+import com.zurrtum.create.content.processing.recipe.ProcessingOutput;
+import java.util.List;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.item.context.UseOnContext;
-import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
-import plus.dragons.createenchantmentindustry.common.CEICommon;
 import plus.dragons.createenchantmentindustry.common.registry.CEIBlocks;
 
 public class MechanicalGrindStoneItem extends BlockItem {
@@ -37,13 +38,12 @@ public class MechanicalGrindStoneItem extends BlockItem {
         super(block, properties);
     }
 
-    public static RecipeHolder<ManualApplicationRecipe> createRecipe() {
-        return new RecipeHolder<>(CEICommon.asResource("mechanical_grindstone"),
-                new ManualApplicationRecipe.Builder<>(ManualApplicationRecipe::new, CEIBlocks.GRINDSTONE_DRAIN.getId())
-                        .require(AllBlocks.ITEM_DRAIN)
-                        .require(CEIBlocks.MECHANICAL_GRINDSTONE)
-                        .output(CEIBlocks.GRINDSTONE_DRAIN)
-                        .build());
+    public static ManualApplicationRecipe createRecipe() {
+        return new ManualApplicationRecipe(
+                List.of(new ProcessingOutput(CEIBlocks.GRINDSTONE_DRAIN.get(), 1)),
+                false,
+                Ingredient.of(AllBlocks.ITEM_DRAIN),
+                Ingredient.of(CEIBlocks.MECHANICAL_GRINDSTONE.get()));
     }
 
     @Override

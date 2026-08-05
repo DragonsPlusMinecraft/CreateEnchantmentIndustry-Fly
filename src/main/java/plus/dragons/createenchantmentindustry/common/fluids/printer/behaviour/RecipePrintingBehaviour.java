@@ -18,18 +18,17 @@
 
 package plus.dragons.createenchantmentindustry.common.fluids.printer.behaviour;
 
-import com.simibubi.create.content.processing.sequenced.SequencedAssemblyRecipe;
-import com.simibubi.create.foundation.utility.CreateLang;
+import com.zurrtum.create.infrastructure.fluids.FluidStack;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.Nullable;
 import plus.dragons.createenchantmentindustry.common.fluids.printer.PrinterBlockEntity;
 import plus.dragons.createenchantmentindustry.common.fluids.printer.PrintingInput;
@@ -41,7 +40,7 @@ import plus.dragons.createenchantmentindustry.util.CEILang;
 public class RecipePrintingBehaviour implements PrintingBehaviour {
     public static final RecipePrintingBehaviour EMPTY = new RecipePrintingBehaviour(ItemStack.EMPTY);
     private final ItemStack template;
-    private @Nullable RecipeHolder<PrintingRecipe> lastRecipe;
+    private @Nullable PrintingRecipe lastRecipe;
 
     public RecipePrintingBehaviour(ItemStack template) {
         this.template = template;
@@ -49,15 +48,18 @@ public class RecipePrintingBehaviour implements PrintingBehaviour {
 
     private Optional<PrintingRecipe> findRecipe(Level level, ItemStack stack, FluidStack fluidStack) {
         var input = new PrintingInput(stack, template, fluidStack);
-        var holder = SequencedAssemblyRecipe.getRecipe(level, input, CEIRecipes.PRINTING.getType(), PrintingRecipe.class);
-        if (holder.isPresent()) {
-            lastRecipe = holder.get();
-            return holder.map(RecipeHolder::value);
+        if (!(level instanceof ServerLevel serverLevel)) {
+            lastRecipe = null;
+            return Optional.empty();
         }
-        holder = level.getRecipeManager().getRecipeFor(CEIRecipes.PRINTING.getType(), input, level, lastRecipe);
-        if (holder.isPresent()) {
-            lastRecipe = holder.get();
-            return holder.map(RecipeHolder::value);
+        // Always query the current RecipeAccess. Keeping a matching recipe as a fast path would retain a recipe
+        // object from the previous RecipeManager after /reload.
+        var recipe = serverLevel.recipeAccess()
+                .getRecipeFor(CEIRecipes.PRINTING.getType(), input, level)
+                .map(RecipeHolder::value);
+        if (recipe.isPresent()) {
+            lastRecipe = recipe.get();
+            return recipe;
         }
         lastRecipe = null;
         return Optional.empty();
@@ -76,21 +78,21 @@ public class RecipePrintingBehaviour implements PrintingBehaviour {
     @Override
     public int getRequiredFluidAmount(Level level, ItemStack stack, FluidStack fluidStack) {
         return findRecipe(level, stack, fluidStack)
-                .map(recipe -> recipe.getFluidIngredients().getFirst().amount())
+                .map(recipe -> recipe.getFluidIngredients().get(0).amount())
                 .orElse(0);
     }
 
     @Override
     public ItemStack getResult(Level level, ItemStack stack, FluidStack fluidStack) {
         return findRecipe(level, stack, fluidStack)
-                .map(recipe -> recipe.getRollableResults().getFirst().getStack())
+                .map(recipe -> recipe.getRollableResults().getFirst().create())
                 .orElse(ItemStack.EMPTY);
     }
 
     @Override
     public void onFinished(Level level, BlockPos pos, PrinterBlockEntity printer) {
         if (lastRecipe != null)
-            lastRecipe.value().playSound(level, pos.below(), SoundSource.BLOCKS);
+            lastRecipe.playSound(level, pos.below(), SoundSource.BLOCKS);
     }
 
     @Override
@@ -100,10 +102,10 @@ public class RecipePrintingBehaviour implements PrintingBehaviour {
         CEILang.translate("gui.goggles.printing.template").forGoggles(tooltip);
         CEILang.item(template).style(ChatFormatting.GRAY).forGoggles(tooltip, 1);
         if (lastRecipe != null) {
-            var cost = lastRecipe.value().getFluidIngredients().size();
+            var cost = lastRecipe.getFluidIngredients().get(0).amount();
             CEILang.translate("gui.goggles.printing.cost",
-                    CEILang.number(lastRecipe.value().getFluidIngredients().size())
-                            .add(CreateLang.translate("generic.unit.millibuckets"))
+                    CEILang.number(cost)
+                            .add(CEILang.translateCreate("generic.unit.millibuckets"))
                             .style(cost <= CEIConfig.fluids().printerFluidCapacity.get()
                                     ? ChatFormatting.GREEN
                                     : ChatFormatting.RED))

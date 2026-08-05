@@ -18,65 +18,129 @@
 
 package plus.dragons.createenchantmentindustry.util;
 
-import net.createmod.catnip.lang.LangBuilder;
-import net.createmod.catnip.lang.LangNumberFormat;
-import net.minecraft.Util;
+import com.zurrtum.create.infrastructure.fluids.FluidStack;
+import java.text.NumberFormat;
+import java.util.List;
+import java.util.Locale;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.Util;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.fluids.FluidStack;
-import plus.dragons.createenchantmentindustry.common.CEICommon;
 
-public class CEILang {
-    public static LangBuilder builder() {
-        return new LangBuilder(CEICommon.ID);
+/** Server-safe language builder used by common gameplay and client tooltips alike. */
+public final class CEILang {
+    private CEILang() {}
+
+    public static Builder builder() {
+        return new Builder(Component.empty());
     }
 
-    public static LangBuilder number(double d) {
-        return builder().text(LangNumberFormat.format(d));
+    public static Builder number(double value) {
+        NumberFormat format = NumberFormat.getNumberInstance(Locale.ROOT);
+        format.setMaximumFractionDigits(3);
+        return text(format.format(value));
     }
 
-    public static LangBuilder text(String text) {
-        return builder().text(text);
+    public static Builder text(String text) {
+        return new Builder(Component.literal(text));
     }
 
-    public static LangBuilder translate(String key, Object... args) {
-        return builder().translate(key, args);
+    public static Builder translate(String key, Object... args) {
+        return translateKey("create_enchantment_industry." + key, args);
     }
 
-    public static LangBuilder description(String category, ResourceLocation location, Object... args) {
-        return builder().add(Component.translatable(Util.makeDescriptionId(category, location), args));
+    public static Builder translateCreate(String key, Object... args) {
+        return translateKey("create." + key, args);
     }
 
-    public static LangBuilder description(String category, ResourceLocation location, String suffix, Object... args) {
-        return builder().add(Component.translatable(Util.makeDescriptionId(category, location) + "." + suffix, args));
+    private static Builder translateKey(String key, Object... args) {
+        Object[] converted = new Object[args.length];
+        for (int i = 0; i < args.length; i++)
+            converted[i] = args[i] instanceof Builder builder ? builder.component() : args[i];
+        return new Builder(Component.translatable(key, converted));
     }
 
-    public static LangBuilder description(Holder<?> holder, Object... args) {
-        var key = holder.getKey();
-        if (key == null)
-            throw new IllegalArgumentException("Can not build description for unregistered object: " + holder);
-        return description(key.registry().getPath(), key.location(), args);
+    public static Builder description(String category, Identifier location, Object... args) {
+        return new Builder(Component.translatable(Util.makeDescriptionId(category, location), args));
     }
 
-    public static LangBuilder description(Holder<?> holder, String suffix, Object... args) {
-        var key = holder.getKey();
-        if (key == null)
-            throw new IllegalArgumentException("Can not build description for unregistered object: " + holder);
-        return description(key.registry().getPath(), key.location(), suffix, args);
+    public static Builder description(String category, Identifier location, String suffix, Object... args) {
+        return new Builder(Component.translatable(Util.makeDescriptionId(category, location) + "." + suffix, args));
     }
 
-    public static LangBuilder block(BlockState state) {
-        return builder().add(state.getBlock().getName());
+    public static Builder description(Holder<?> holder, Object... args) {
+        var key = holder.unwrapKey().orElseThrow(
+                () -> new IllegalArgumentException("Cannot build description for unregistered object: " + holder));
+        return description(key.registry().getPath(), key.identifier(), args);
     }
 
-    public static LangBuilder item(ItemStack stack) {
-        return builder().add(stack.getHoverName().copy());
+    public static Builder description(Holder<?> holder, String suffix, Object... args) {
+        var key = holder.unwrapKey().orElseThrow(
+                () -> new IllegalArgumentException("Cannot build description for unregistered object: " + holder));
+        return description(key.registry().getPath(), key.identifier(), suffix, args);
     }
 
-    public static LangBuilder fluid(FluidStack stack) {
-        return builder().add(stack.getHoverName().copy());
+    public static Builder block(BlockState state) {
+        return new Builder(state.getBlock().getName().copy());
+    }
+
+    public static Builder item(ItemStack stack) {
+        return new Builder(stack.getHoverName().copy());
+    }
+
+    public static Builder fluid(FluidStack stack) {
+        return new Builder(stack.getName().copy());
+    }
+
+    public static final class Builder {
+        private final MutableComponent component;
+
+        private Builder(MutableComponent component) {
+            this.component = component;
+        }
+
+        public Builder add(Builder other) {
+            component.append(other.component());
+            return this;
+        }
+
+        public Builder add(Component other) {
+            component.append(other);
+            return this;
+        }
+
+        public Builder add(String text) {
+            component.append(text);
+            return this;
+        }
+
+        public Builder style(ChatFormatting... formatting) {
+            component.withStyle(formatting);
+            return this;
+        }
+
+        public MutableComponent component() {
+            return component;
+        }
+
+        public String getString() {
+            return component.getString();
+        }
+
+        public void forGoggles(List<Component> tooltip) {
+            forGoggles(tooltip, 0);
+        }
+
+        public void forGoggles(List<Component> tooltip, int indent) {
+            MutableComponent line = Component.empty();
+            if (indent > 0)
+                line.append(Component.literal("  ".repeat(indent)));
+            line.append(component);
+            tooltip.add(line);
+        }
     }
 }

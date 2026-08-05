@@ -18,62 +18,64 @@
 
 package plus.dragons.createenchantmentindustry.common.registry;
 
-import static com.simibubi.create.AllBlocks.EXPERIENCE_BLOCK;
-import static com.simibubi.create.AllItems.EXP_NUGGET;
-import static plus.dragons.createdragonsplus.common.registry.CDPItems.BLAZE_UPGRADE_SMITHING_TEMPLATE;
-import static plus.dragons.createenchantmentindustry.common.registry.CEIBlocks.*;
-import static plus.dragons.createenchantmentindustry.common.registry.CEIItems.*;
-
-import net.minecraft.core.Holder;
+import com.zurrtum.create.AllBlocks;
+import com.zurrtum.create.AllItems;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTab.TabVisibility;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredRegister;
+import plus.dragons.createdragonsplus.registry.CDPItems;
 import plus.dragons.createenchantmentindustry.common.CEICommon;
 import plus.dragons.createenchantmentindustry.config.CEIConfig;
-import plus.dragons.createenchantmentindustry.util.CEILang;
 
-public class CEICreativeModeTabs {
-    private static final DeferredRegister<CreativeModeTab> TABS = DeferredRegister
-            .create(Registries.CREATIVE_MODE_TAB, CEICommon.ID);
-    public static final Holder<CreativeModeTab> BASE = TABS.register("base", CEICreativeModeTabs::base);
+public final class CEICreativeModeTabs {
+    public static final ResourceKey<CreativeModeTab> BASE_KEY = ResourceKey.create(
+            Registries.CREATIVE_MODE_TAB, CEICommon.asResource("base"));
+    public static CreativeModeTab BASE;
 
-    public static void register(IEventBus modBus) {
-        TABS.register(modBus);
+    private CEICreativeModeTabs() {}
+
+    public static synchronized void register() {
+        if (BASE != null) {
+            return;
+        }
+        BASE = Registry.register(
+                BuiltInRegistries.CREATIVE_MODE_TAB,
+                BASE_KEY,
+                CreativeModeTab.builder(null, -1)
+                        .title(Component.translatable("itemGroup.create_enchantment_industry.base"))
+                        .icon(CEIBlocks.BLAZE_ENCHANTER::asStack)
+                        .displayItems(CEICreativeModeTabs::buildBaseContents)
+                        .build());
     }
 
-    private static CreativeModeTab base(ResourceLocation id) {
-        return CreativeModeTab.builder()
-                .title(CEILang.description("itemGroup", id).component())
-                .icon(BLAZE_ENCHANTER::asStack)
-                .displayItems(CEICreativeModeTabs::buildBaseContents)
-                .withTabsBefore(ResourceLocation.fromNamespaceAndPath("create_dragons_plus", "base"))
-                .build();
-    }
-
-    private static void buildBaseContents(CreativeModeTab.ItemDisplayParameters parameters, CreativeModeTab.Output output) {
-        output.accept(MECHANICAL_GRINDSTONE);
-        output.accept(EXPERIENCE_HATCH);
-        output.accept(EXPERIENCE_LANTERN);
-        output.accept(PRINTER);
-        output.accept(BLAZE_ENCHANTER);
-        output.accept(BLAZE_FORGER);
-        if (CEIConfig.features().classicBlazeEnchanter.get())
-            output.accept(CLASSIC_BLAZE_ENCHANTER);
-        output.accept(EXPERIENCE_BLOCK);
-        output.accept(SUPER_EXPERIENCE_BLOCK);
-        output.accept(EXP_NUGGET);
-        output.accept(SUPER_EXPERIENCE_NUGGET);
-        output.accept(ENCHANTING_TEMPLATE);
-        output.accept(SUPER_ENCHANTING_TEMPLATE);
-        output.accept(BLAZE_UPGRADE_SMITHING_TEMPLATE);
-        if (CEIConfig.features().classicBlazeEnchanter.get())
-            output.accept(BLAZES_ENCHANTING_HANDBOOK);
-        output.accept(EXPERIENCE_CAKE_BASE, TabVisibility.SEARCH_TAB_ONLY);
-        output.accept(EXPERIENCE_CAKE);
-        output.accept(EXPERIENCE_CAKE_SLICE);
-        output.accept(EXPERIENCE_BUCKET);
+    private static void buildBaseContents(
+            CreativeModeTab.ItemDisplayParameters parameters, CreativeModeTab.Output output) {
+        output.accept(CEIBlocks.MECHANICAL_GRINDSTONE.asItem());
+        output.accept(CEIBlocks.EXPERIENCE_HATCH.asItem());
+        output.accept(CEIBlocks.EXPERIENCE_LANTERN.asItem());
+        output.accept(CEIBlocks.PRINTER.asItem());
+        output.accept(CEIBlocks.BLAZE_ENCHANTER.asItem());
+        output.accept(CEIBlocks.BLAZE_FORGER.asItem());
+        if (CEIConfig.features().classicBlazeEnchanter.get()) {
+            output.accept(CEIBlocks.CLASSIC_BLAZE_ENCHANTER.asItem());
+        }
+        output.accept(AllBlocks.EXPERIENCE_BLOCK);
+        output.accept(CEIBlocks.SUPER_EXPERIENCE_BLOCK.asItem());
+        output.accept(AllItems.EXP_NUGGET);
+        output.accept(CEIItems.SUPER_EXPERIENCE_NUGGET.get());
+        output.accept(CEIItems.ENCHANTING_TEMPLATE.get());
+        output.accept(CEIItems.SUPER_ENCHANTING_TEMPLATE.get());
+        output.accept(CDPItems.BLAZE_UPGRADE_SMITHING_TEMPLATE.get());
+        if (CEIConfig.features().classicBlazeEnchanter.get()) {
+            output.accept(CEIItems.BLAZES_ENCHANTING_HANDBOOK.get());
+        }
+        output.accept(CEIItems.EXPERIENCE_CAKE_BASE.get(), TabVisibility.SEARCH_TAB_ONLY);
+        output.accept(CEIItems.EXPERIENCE_CAKE.get());
+        output.accept(CEIItems.EXPERIENCE_CAKE_SLICE.get());
+        output.accept(CEIItems.EXPERIENCE_BUCKET.get());
     }
 }

@@ -18,8 +18,8 @@
 
 package plus.dragons.createenchantmentindustry.config;
 
-import net.createmod.catnip.config.ConfigBase;
-import net.createmod.catnip.config.ui.ConfigAnnotations.RequiresRestart;
+import com.zurrtum.create.catnip.config.ConfigBase;
+import com.zurrtum.create.catnip.config.ui.ConfigAnnotations.RequiresRestart;
 
 public class CEICommonConfig extends ConfigBase {
     public final CEIFeaturesConfig features = nested(1, CEIFeaturesConfig::new,

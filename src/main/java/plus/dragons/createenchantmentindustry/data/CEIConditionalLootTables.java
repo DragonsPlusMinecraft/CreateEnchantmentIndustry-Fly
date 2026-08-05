@@ -20,53 +20,74 @@ package plus.dragons.createenchantmentindustry.data;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.mojang.serialization.JsonOps;
 import java.util.concurrent.CompletableFuture;
+import net.fabricmc.fabric.api.resource.conditions.v1.ResourceCondition;
+import net.fabricmc.fabric.api.resource.conditions.v1.ResourceConditions;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.data.CachedOutput;
 import net.minecraft.data.DataProvider;
 import net.minecraft.data.PackOutput;
-import net.minecraft.resources.ResourceLocation;
-import net.neoforged.neoforge.common.conditions.ICondition;
+import net.minecraft.resources.Identifier;
+import plus.dragons.createenchantmentindustry.common.CEICommon;
 
 public final class CEIConditionalLootTables {
     private CEIConditionalLootTables() {}
 
-    public static JsonObject selfDroppingBlock(ResourceLocation block, HolderLookup.Provider registries, ICondition condition) {
+    public static JsonObject selfDroppingBlock(
+            Identifier block, HolderLookup.Provider registries, ResourceCondition condition) {
         return block(block, itemEntry(block), registries, condition);
     }
 
-    public static JsonObject block(ResourceLocation block, JsonObject entry, HolderLookup.Provider registries, ICondition condition) {
+    public static JsonObject block(
+            Identifier block,
+            JsonObject entry,
+            HolderLookup.Provider registries,
+            ResourceCondition condition) {
         var table = new JsonObject();
         table.addProperty("type", "minecraft:block");
         table.add("pools", pools(entry));
-        table.addProperty("random_sequence", block.withPrefix("blocks/").toString());
-        ICondition.writeConditions(registries, table, condition);
+        table.add(
+                ResourceConditions.CONDITIONS_KEY,
+                ResourceCondition.CONDITION_CODEC
+                        .encodeStart(JsonOps.INSTANCE, condition)
+                        .getOrThrow(message -> new IllegalStateException(
+                                "Failed to encode loot-table resource condition: " + message)));
         return table;
     }
 
-    public static JsonObject itemEntry(ResourceLocation item) {
+    public static JsonObject itemEntry(Identifier item) {
         var entry = new JsonObject();
-        entry.addProperty("type", "minecraft:item");
-        entry.addProperty("name", item.toString());
+        entry.addProperty("type", "minecraft:tag");
+        entry.addProperty("name", optionalDropTag(item).toString());
+        entry.addProperty("expand", true);
         return entry;
     }
 
-    public static JsonObject copyComponents(ResourceLocation component) {
+    public static JsonObject copyNbt(String sourcePath, String targetPath) {
         var function = new JsonObject();
-        function.addProperty("function", "minecraft:copy_components");
+        function.addProperty("function", "minecraft:copy_nbt");
         function.addProperty("source", "block_entity");
-        var include = new JsonArray();
-        include.add(component.toString());
-        function.add("include", include);
+        var operation = new JsonObject();
+        operation.addProperty("source", sourcePath);
+        operation.addProperty("target", targetPath);
+        operation.addProperty("op", "replace");
+        var operations = new JsonArray();
+        operations.add(operation);
+        function.add("ops", operations);
         return function;
     }
 
-    public static CompletableFuture<?> saveBlock(PackOutput output, ResourceLocation block, JsonObject table) {
-        var pathProvider = output.createPathProvider(PackOutput.Target.DATA_PACK, "loot_table");
+    public static CompletableFuture<?> saveBlock(PackOutput output, Identifier block, JsonObject table) {
+        var pathProvider = output.createPathProvider(PackOutput.Target.DATA_PACK, "loot_tables");
         // These tables intentionally overwrite Registrate's default block loot tables at
         // the same path. The shared hash cache can otherwise skip the second write and
         // leave the unconditional table on disk.
         return DataProvider.saveStable(CachedOutput.NO_CACHE, table, pathProvider.json(block.withPrefix("blocks/")));
+    }
+
+    public static Identifier optionalDropTag(Identifier item) {
+        return CEICommon.asResource("optional_block_drops/" + item.getPath());
     }
 
     private static JsonArray pools(JsonObject entry) {

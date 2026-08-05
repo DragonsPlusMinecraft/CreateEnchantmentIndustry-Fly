@@ -18,25 +18,31 @@
 
 package plus.dragons.createenchantmentindustry.common.registry;
 
-import static plus.dragons.createenchantmentindustry.common.CEICommon.REGISTRATE;
-
-import com.simibubi.create.content.kinetics.mechanicalArm.ArmInteractionPointType;
-import com.tterrag.registrate.util.entry.RegistryEntry;
-import net.neoforged.bus.api.IEventBus;
+import com.zurrtum.create.api.registry.CreateRegistries;
+import com.zurrtum.create.content.kinetics.mechanicalArm.ArmInteractionPointType;
+import net.minecraft.core.Registry;
+import net.minecraft.resources.Identifier;
+import plus.dragons.createenchantmentindustry.common.CEICommon;
 import plus.dragons.createenchantmentindustry.common.processing.classic_enchanter.ClassicBlazeEnchanterArmInteractionPoint;
 import plus.dragons.createenchantmentindustry.common.processing.enchanter.BlazeEnchanterArmInteractionPoint;
 import plus.dragons.createenchantmentindustry.common.processing.forger.BlazeForgerArmInteractionPoint;
 
-public class CEIArmInterationPoints {
-    public static final RegistryEntry<ArmInteractionPointType, BlazeEnchanterArmInteractionPoint.Type> BLAZE_ENCHANTER = REGISTRATE
-            .armInteractionPoint("blaze_enchanter", BlazeEnchanterArmInteractionPoint.Type::new)
-            .register();
-    public static final RegistryEntry<ArmInteractionPointType, BlazeForgerArmInteractionPoint.Type> BLAZE_FORGER = REGISTRATE
-            .armInteractionPoint("blaze_forger", BlazeForgerArmInteractionPoint.Type::new)
-            .register();
-    public static final RegistryEntry<ArmInteractionPointType, ClassicBlazeEnchanterArmInteractionPoint.Type> CLASSIC_BLAZE_ENCHANTER = REGISTRATE
-            .armInteractionPoint("classic_blaze_enchanter", ClassicBlazeEnchanterArmInteractionPoint.Type::new)
-            .register();
+public final class CEIArmInterationPoints {
+    public static final CEIRegistryEntry<BlazeEnchanterArmInteractionPoint.Type> BLAZE_ENCHANTER = register(
+            "blaze_enchanter", new BlazeEnchanterArmInteractionPoint.Type());
+    public static final CEIRegistryEntry<BlazeForgerArmInteractionPoint.Type> BLAZE_FORGER = register(
+            "blaze_forger", new BlazeForgerArmInteractionPoint.Type());
+    public static final CEIRegistryEntry<ClassicBlazeEnchanterArmInteractionPoint.Type> CLASSIC_BLAZE_ENCHANTER = register("classic_blaze_enchanter", new ClassicBlazeEnchanterArmInteractionPoint.Type());
 
-    public static void register(IEventBus modBus) {}
+    private CEIArmInterationPoints() {}
+
+    public static void register() {
+        // Class initialization performs registration before Create sorts interaction point types.
+    }
+
+    private static <T extends ArmInteractionPointType> CEIRegistryEntry<T> register(String path, T type) {
+        Identifier id = CEICommon.asResource(path);
+        Registry.register(CreateRegistries.ARM_INTERACTION_POINT_TYPE, id, type);
+        return new CEIRegistryEntry<>(id, type);
+    }
 }

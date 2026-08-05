@@ -20,7 +20,7 @@ package plus.dragons.createenchantmentindustry.mixin;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import com.simibubi.create.content.kinetics.deployer.DeployerFakePlayer;
+import com.zurrtum.create.content.kinetics.deployer.DeployerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.player.Player;
@@ -42,7 +42,7 @@ public abstract class FishingHookMixin {
     @WrapOperation(method = "retrieve", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/Level;addFreshEntity(Lnet/minecraft/world/entity/Entity;)Z"))
     private boolean collectDeployerFishingExperience(Level level, Entity entity, Operation<Boolean> original) {
         if (entity instanceof ExperienceOrb orb
-                && getPlayerOwner() instanceof DeployerFakePlayer deployer
+                && getPlayerOwner() instanceof DeployerPlayer deployer
                 && CEIConfig.kinetics().deployerCollectXp.get()) {
             DeployerExtension.collectExperience(deployer, orb.getValue());
             return true;

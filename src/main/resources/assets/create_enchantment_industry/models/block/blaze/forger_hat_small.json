@@ -2,7 +2,8 @@
   "credit": "By RaymondBlaze, made with Blockbench",
   "render_type": "cutout_mipped",
   "textures": {
-    "hat": "create_enchantment_industry:block/forger_hat_small"
+    "hat": "create_enchantment_industry:block/forger_hat_small",
+    "particle": "#hat"
   },
   "elements": [
     {

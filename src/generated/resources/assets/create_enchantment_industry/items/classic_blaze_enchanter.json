@@ -1,0 +1,7 @@
+{
+  "model": {
+    "type": "create_enchantment_industry:model/blaze_device",
+    "book": true,
+    "model": "create_enchantment_industry:item/classic_blaze_enchanter"
+  }
+}

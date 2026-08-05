@@ -18,58 +18,37 @@
 
 package plus.dragons.createenchantmentindustry.common.processing.forger;
 
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.simibubi.create.AllBlocks;
-import com.simibubi.create.content.processing.burner.BlazeBurnerBlock.HeatLevel;
-import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
-import com.simibubi.create.foundation.blockEntity.behaviour.ValueBoxTransform;
-import com.simibubi.create.foundation.item.ItemHelper;
-import com.simibubi.create.foundation.utility.CreateLang;
-import dev.engine_room.flywheel.lib.model.baked.PartialModel;
-import dev.engine_room.flywheel.lib.transform.TransformStack;
+import com.zurrtum.create.AllBlocks;
+import com.zurrtum.create.api.behaviour.BlockEntityBehaviour;
+import com.zurrtum.create.content.processing.burner.BlazeBurnerBlock.HeatLevel;
 import java.util.List;
-import java.util.function.Consumer;
-import net.createmod.catnip.lang.LangBuilder;
-import net.createmod.catnip.math.AngleHelper;
-import net.createmod.catnip.math.VecHelper;
+import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext;
+import net.fabricmc.fabric.api.transfer.v1.transaction.base.SnapshotParticipant;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
-import net.minecraft.core.HolderLookup.Provider;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Clearable;
-import net.minecraft.world.item.Item.TooltipContext;
+import net.minecraft.world.Containers;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.enchantment.EnchantmentHelper;
-import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.Vec3;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import org.jetbrains.annotations.Nullable;
-import plus.dragons.createdragonsplus.common.advancements.AdvancementBehaviour;
-import plus.dragons.createdragonsplus.common.fluids.tank.ConfigurableFluidTank;
-import plus.dragons.createdragonsplus.util.FieldsNullabilityUnknownByDefault;
-import plus.dragons.createenchantmentindustry.client.model.CEIPartialModels;
+import plus.dragons.createenchantmentindustry.common.advancement.AdvancementBehaviour;
 import plus.dragons.createenchantmentindustry.common.fluids.experience.BlazeExperienceBlockEntity;
+import plus.dragons.createenchantmentindustry.common.item.CEIItemData;
 import plus.dragons.createenchantmentindustry.common.processing.enchanter.EnchantingTemplateItem;
 import plus.dragons.createenchantmentindustry.common.registry.CEIAdvancements;
-import plus.dragons.createenchantmentindustry.common.registry.CEIFluids;
 import plus.dragons.createenchantmentindustry.config.CEIConfig;
 import plus.dragons.createenchantmentindustry.util.BlazeLightningHelper;
 import plus.dragons.createenchantmentindustry.util.CEILang;
 
-@FieldsNullabilityUnknownByDefault
 public class BlazeForgerBlockEntity extends BlazeExperienceBlockEntity implements Clearable {
     public static final int FORGING_TIME = 200;
     protected BlazeForgerMode mode = BlazeForgerMode.MERGE;
@@ -79,37 +58,44 @@ public class BlazeForgerBlockEntity extends BlazeExperienceBlockEntity implement
     protected final BlazeForgerInventory inventory;
     protected BlazeForgerModeBehaviour modeSelector;
     protected AdvancementBehaviour advancement;
+    protected @Nullable ActiveForging activeForging;
+    private final SnapshotParticipant<AutomationState> automationState = new SnapshotParticipant<>() {
+        @Override
+        protected AutomationState createSnapshot() {
+            return new AutomationState(processingTime, activeForging);
+        }
+
+        @Override
+        protected void readSnapshot(AutomationState snapshot) {
+            processingTime = snapshot.processingTime();
+            activeForging = snapshot.activeForging();
+            inventory.updateResult();
+        }
+
+        @Override
+        protected void onFinalCommit() {
+            inventory.updateResult();
+            notifyUpdate();
+        }
+    };
 
     public BlazeForgerBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
         this.inventory = new BlazeForgerInventory(this);
     }
 
-    public @Nullable IFluidHandler getFluidHandler(@Nullable Direction side) {
-        if ((side == Direction.DOWN || side == null) && !isRemoved())
-            return tanks.getCapability();
-        return null;
-    }
-
     @Override
-    public void addBehaviours(List<BlockEntityBehaviour> behaviours) {
+    public void addBehaviours(List<BlockEntityBehaviour<?>> behaviours) {
         super.addBehaviours(behaviours);
-        this.modeSelector = new BlazeForgerModeBehaviour(this, new ModeTransform());
+        this.modeSelector = new BlazeForgerModeBehaviour(this);
         this.advancement = new AdvancementBehaviour(this);
         behaviours.add(this.modeSelector);
         behaviours.add(this.advancement);
     }
 
     @Override
-    protected ConfigurableFluidTank createNormalTank(Consumer<FluidStack> fluidUpdateCallback) {
-        return new ConfigurableFluidTank(CEIConfig.fluids().blazeForgerFluidCapacity.get(), fluidUpdateCallback)
-                .allowInsertion(fluidStack -> fluidStack.is(CEIFluids.EXPERIENCE));
-    }
-
-    @Override
-    protected ConfigurableFluidTank createSpecialTank(Consumer<FluidStack> fluidUpdateCallback) {
-        return new ConfigurableFluidTank(CEIConfig.fluids().blazeForgerFluidCapacity.get(), fluidUpdateCallback)
-                .forbidInsertion();
+    protected int getExperienceTankCapacity() {
+        return CEIConfig.fluids().blazeForgerFluidCapacity.get();
     }
 
     @Override
@@ -118,46 +104,37 @@ public class BlazeForgerBlockEntity extends BlazeExperienceBlockEntity implement
     }
 
     @Override
-    @OnlyIn(Dist.CLIENT)
-    protected @Nullable PartialModel getHatModel(HeatLevel heatLevel) {
-        return heatLevel.isAtLeast(HeatLevel.FADING)
-                ? CEIPartialModels.BLAZE_FORGER_HAT
-                : CEIPartialModels.BLAZE_FORGER_HAT_SMALL;
+    protected void write(ValueOutput output, boolean clientPacket) {
+        super.write(output, clientPacket);
+        output.putInt("ProcessingTime", processingTime);
+        output.putInt("ForgingMode", mode.ordinal());
+        inventory.write(output.child("Inventory"));
+        if (activeForging != null)
+            activeForging.write(output.child("ActiveForging"));
     }
 
     @Override
-    public void write(CompoundTag compound, Provider registries, boolean clientPacket) {
-        super.write(compound, registries, clientPacket);
-        compound.putInt("ProcessingTime", processingTime);
-        compound.putInt("ForgingMode", mode.ordinal());
-        compound.put("Inventory", inventory.serializeNBT(registries));
-    }
-
-    @Override
-    protected void read(CompoundTag compound, Provider registries, boolean clientPacket) {
-        super.read(compound, registries, clientPacket);
-        processingTime = compound.getInt("ProcessingTime");
-        if (compound.contains("ForgingMode", Tag.TAG_INT)) {
-            mode = BlazeForgerMode.BY_ID.apply(compound.getInt("ForgingMode"));
-        } else {
-            // TODO Remove this legacy fallback after pre-mode-panel Blaze Forger saves no longer need conversion.
-            CompoundTag inventoryTag = compound.getCompound("Inventory");
-            if (inventoryTag.contains("Mode", Tag.TAG_INT))
-                mode = BlazeForgerMode.fromLegacyOperation(inventoryTag.getInt("Mode"));
-        }
-        inventory.deserializeNBT(registries, compound.getCompound("Inventory"));
+    protected void read(ValueInput input, boolean clientPacket) {
+        super.read(input, clientPacket);
+        processingTime = input.getIntOr("ProcessingTime", -1);
+        mode = BlazeForgerMode.BY_ID.apply(input.getIntOr("ForgingMode", 0));
+        inventory.read(input.childOrEmpty("Inventory"));
+        activeForging = input.child("ActiveForging").map(ActiveForging::load).orElse(null);
+        if (processingTime >= 0 && activeForging == null)
+            processingTime = -1;
     }
 
     @Override
     public void initialize() {
         super.initialize();
+        inventory.onLoad();
     }
 
     @Override
     public void destroy() {
         super.destroy();
         if (level != null) {
-            ItemHelper.dropContents(level, worldPosition, inventory);
+            Containers.dropContents(level, worldPosition, inventory);
         }
     }
 
@@ -181,20 +158,7 @@ public class BlazeForgerBlockEntity extends BlazeExperienceBlockEntity implement
                 inventory.updateResult();
                 notifyUpdate();
             }
-            var cost = inventory.getExperienceCost();
-            if (cost > 0 && consumeExperience(cost, special, true)) {
-                if (processingTime < 0) {
-                    processingTime = FORGING_TIME / 4;
-                    return;
-                }
-                if (processingTime > 0) {
-                    processingTime--;
-                    return;
-                }
-                consumeExperience(cost, special, false);
-                processingTime = -1;
-                inventory.applyResult();
-            } else if (processingTime != -1) processingTime = -1;
+            tickVirtual();
             return;
         }
         if (!(level instanceof ServerLevel serverLevel))
@@ -203,32 +167,100 @@ public class BlazeForgerBlockEntity extends BlazeExperienceBlockEntity implement
             inventory.updateResult();
             notifyUpdate();
         }
-        var cost = inventory.getExperienceCost();
-        if (cost > 0 && consumeExperience(cost, special, true)) {
-            if (processingTime < 0) {
-                processingTime = FORGING_TIME;
-                notifyUpdate();
-                return;
-            }
-            if (processingTime > 0) {
-                processingTime--;
-                notifyUpdate();
-                return;
-            }
-            if (special && !cursed && strikeLightning(serverLevel, strikePos)) {
-                advancement.trigger(CEIAdvancements.OSHA_VIOLATION.builtinTrigger());
-                serverLevel.destroyBlock(worldPosition, false);
-                serverLevel.setBlockAndUpdate(worldPosition, AllBlocks.LIT_BLAZE_BURNER.getDefaultState());
-                this.setRemoved();
-                return;
-            }
-            consumeExperience(cost, special, false);
-            processingTime = -1;
-            inventory.applyResult();
+        if (activeForging == null) {
+            startProcessing(FORGING_TIME, true);
+            return;
+        }
+        ActiveForging active = activeForging;
+        if (!active.matches(inventory.getStackInSlot(0), inventory.getStackInSlot(1))) {
+            cancelProcessing();
+            return;
+        }
+        if (!consumeExperience(active.cost(), active.special(), true))
+            return;
+        if (processingTime > 0) {
+            processingTime--;
             notifyUpdate();
-            level.playSound(null, worldPosition, SoundEvents.ANVIL_USE, SoundSource.BLOCKS, 1.0F, level.random.nextFloat() * 0.1F + 0.9F);
-        } else if (processingTime != -1) {
-            processingTime = -1;
+            return;
+        }
+        if (active.strikeLightning() && strikeLightning(serverLevel, strikePos)) {
+            advancement.trigger(CEIAdvancements.OSHA_VIOLATION.builtinTrigger());
+            serverLevel.destroyBlock(worldPosition, false);
+            serverLevel.setBlockAndUpdate(worldPosition, AllBlocks.LIT_BLAZE_BURNER.defaultBlockState());
+            this.setRemoved();
+            return;
+        }
+        if (!consumeExperience(active.cost(), active.special(), false))
+            return;
+        inventory.applyResult(
+                active.primaryOutput(),
+                active.secondaryOutput(),
+                active.operation(),
+                active.conflicting(),
+                active.overCap(),
+                active.special());
+        finishProcessing();
+        notifyUpdate();
+        level.playSound(null, worldPosition, SoundEvents.ANVIL_USE, SoundSource.BLOCKS, 1.0F, level.random.nextFloat() * 0.1F + 0.9F);
+    }
+
+    private void tickVirtual() {
+        if (activeForging == null) {
+            startProcessing(FORGING_TIME / 4, false);
+            return;
+        }
+        ActiveForging active = activeForging;
+        if (!active.matches(inventory.getStackInSlot(0), inventory.getStackInSlot(1))) {
+            cancelProcessing();
+            return;
+        }
+        if (processingTime > 0) {
+            processingTime--;
+            return;
+        }
+        consumeExperience(active.cost(), active.special(), false);
+        inventory.applyResult(
+                active.primaryOutput(),
+                active.secondaryOutput(),
+                active.operation(),
+                active.conflicting(),
+                active.overCap(),
+                active.special());
+        finishProcessing();
+    }
+
+    private boolean startProcessing(int duration, boolean requireExperience) {
+        BlazeForgerInventory.Result result = inventory.getLastResult();
+        int cost = result.experienceCost();
+        if (!result.valid()
+                || inventory.hasRemainingOutput()
+                || cost <= 0
+                || requireExperience && !consumeExperience(cost, special, true))
+            return false;
+        activeForging = new ActiveForging(
+                inventory.getStackInSlot(0).copy(),
+                inventory.getStackInSlot(1).copy(),
+                result.primaryOutput().copy(),
+                result.secondaryOutput().copy(),
+                cost,
+                result.operation(),
+                result.conflicting(),
+                result.overCap(),
+                special,
+                special && !cursed);
+        processingTime = duration;
+        notifyUpdate();
+        return true;
+    }
+
+    private void finishProcessing() {
+        processingTime = -1;
+        activeForging = null;
+    }
+
+    private void cancelProcessing() {
+        if (processingTime != -1 || activeForging != null) {
+            finishProcessing();
             notifyUpdate();
         }
     }
@@ -241,7 +273,7 @@ public class BlazeForgerBlockEntity extends BlazeExperienceBlockEntity implement
         if (this.mode == mode)
             return;
         this.mode = mode;
-        processingTime = -1;
+        finishProcessing();
         inventory.updateResult();
         notifyUpdate();
     }
@@ -253,7 +285,9 @@ public class BlazeForgerBlockEntity extends BlazeExperienceBlockEntity implement
             stack = inventory.insertItem(0, stack, simulate);
         if (!stack.isEmpty())
             stack = inventory.insertItem(1, stack, simulate);
-        if (!simulate && (original.getCount() != stack.getCount() || !ItemStack.isSameItemSameComponents(original, stack))) {
+        if (!simulate
+                && (original.getCount() != stack.getCount()
+                        || !ItemStack.isSameItemSameComponents(original, stack))) {
             inventory.updateResult();
             notifyUpdate();
         }
@@ -261,7 +295,7 @@ public class BlazeForgerBlockEntity extends BlazeExperienceBlockEntity implement
     }
 
     public ItemStack extractItem(boolean simulate) {
-        for (int i = inventory.getSlots() - 1; i >= 0; i--) {
+        for (int i = inventory.getExposedSlotCount() - 1; i >= 0; i--) {
             ItemStack extracted = inventory.extractItem(i, 1, simulate);
             if (!extracted.isEmpty()) {
                 if (!simulate && i < 2) {
@@ -289,6 +323,16 @@ public class BlazeForgerBlockEntity extends BlazeExperienceBlockEntity implement
         return remainder;
     }
 
+    public ItemStack insertAutomationItem(ItemStack stack, TransactionContext transaction) {
+        if (stack.isEmpty() || inventory.hasRemainingOutput() || hasRecoverableAutomationInput())
+            return stack;
+        int slot = getAutomationInsertionSlot(stack);
+        if (slot < 0)
+            return stack;
+        automationState.updateSnapshots(transaction);
+        return inventory.insertItem(slot, stack, transaction);
+    }
+
     public ItemStack extractAutomationItem(int slot, int amount, boolean simulate) {
         if (slot < 0 || amount <= 0)
             return ItemStack.EMPTY;
@@ -303,6 +347,26 @@ public class BlazeForgerBlockEntity extends BlazeExperienceBlockEntity implement
             notifyUpdate();
         }
         return extracted;
+    }
+
+    public ItemStack extractAutomationItem(int amount, TransactionContext transaction) {
+        if (amount <= 0)
+            return ItemStack.EMPTY;
+        for (int slot = 3; slot >= 2; slot--) {
+            automationState.updateSnapshots(transaction);
+            ItemStack extracted = inventory.extractItem(slot, amount, transaction);
+            if (!extracted.isEmpty())
+                return extracted;
+        }
+        for (int slot = 1; slot >= 0; slot--) {
+            if (!isRecoverableAutomationInput(slot))
+                continue;
+            automationState.updateSnapshots(transaction);
+            ItemStack extracted = inventory.extractItem(slot, amount, transaction);
+            if (!extracted.isEmpty())
+                return extracted;
+        }
+        return ItemStack.EMPTY;
     }
 
     public int getAutomationSlotCount() {
@@ -399,7 +463,7 @@ public class BlazeForgerBlockEntity extends BlazeExperienceBlockEntity implement
     }
 
     private static boolean hasEnchantments(ItemStack stack) {
-        return !EnchantmentHelper.getEnchantmentsForCrafting(stack).isEmpty();
+        return !CEIItemData.getEnchantmentsForCrafting(stack).isEmpty();
     }
 
     private static boolean insertedAny(ItemStack original, ItemStack remainder) {
@@ -407,13 +471,12 @@ public class BlazeForgerBlockEntity extends BlazeExperienceBlockEntity implement
                 || !ItemStack.isSameItemSameComponents(original, remainder);
     }
 
-    @Override
     public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
-        boolean added = super.addToGoggleTooltip(tooltip, isPlayerSneaking);
+        boolean added = false;
         var style = special
                 ? (cursed ? ChatFormatting.RED : ChatFormatting.BLUE)
                 : ChatFormatting.GOLD;
-        LangBuilder mb = CreateLang.translate("generic.unit.millibuckets");
+        CEILang.Builder mb = CEILang.translateCreate("generic.unit.millibuckets");
         CEILang.translate(
                 "gui.goggles.forging.blaze_mode",
                 CEILang.translate("gui.blaze_forger.blaze_mode." + (special ? "super" : "normal")).style(style))
@@ -509,35 +572,73 @@ public class BlazeForgerBlockEntity extends BlazeExperienceBlockEntity implement
         if (stack.isEmpty())
             return;
         CEILang.item(stack).style(ChatFormatting.GRAY).forGoggles(tooltip, 1);
-        var enchantments = EnchantmentHelper.getEnchantmentsForCrafting(stack);
-        if (!enchantments.isEmpty()) {
-            enchantments.addToTooltip(
-                    TooltipContext.of(level),
-                    component -> CEILang.builder().add(component).forGoggles(tooltip, 2),
-                    TooltipFlag.NORMAL);
-        }
+        CEIItemData.getEnchantmentsForCrafting(stack).forEach((enchantment, enchantmentLevel) -> CEILang.builder().add(Enchantment.getFullname(enchantment, enchantmentLevel)).forGoggles(tooltip, 2));
     }
 
     @Override
     public void clearContent() {
         inventory.clear();
+        finishProcessing();
     }
 
-    private static class ModeTransform extends ValueBoxTransform.Sided {
-        @Override
-        protected Vec3 getSouthLocation() {
-            return VecHelper.voxelSpace(8, 8, 13.5);
+    private record AutomationState(
+            int processingTime,
+            @Nullable ActiveForging activeForging) {}
+
+    protected record ActiveForging(
+            ItemStack firstInput,
+            ItemStack secondInput,
+            ItemStack primaryOutput,
+            ItemStack secondaryOutput,
+            int cost,
+            BlazeForgerMode operation,
+            boolean conflicting,
+            boolean overCap,
+            boolean special,
+            boolean strikeLightning) {
+        void write(ValueOutput output) {
+            output.store("FirstInput", ItemStack.CODEC, firstInput);
+            output.store("SecondInput", ItemStack.CODEC, secondInput);
+            output.store("PrimaryOutput", ItemStack.CODEC, primaryOutput);
+            output.store("SecondaryOutput", ItemStack.CODEC, secondaryOutput);
+            output.putInt("Cost", cost);
+            output.putInt("Operation", operation.ordinal());
+            output.putBoolean("Conflicting", conflicting);
+            output.putBoolean("OverCap", overCap);
+            output.putBoolean("Special", special);
+            output.putBoolean("StrikeLightning", strikeLightning);
         }
 
-        @Override
-        public void rotate(LevelAccessor level, BlockPos pos, BlockState state, PoseStack poseStack) {
-            float yRot = AngleHelper.horizontalAngle(getSide()) + 180;
-            TransformStack.of(poseStack).rotateYDegrees(yRot);
+        static @Nullable ActiveForging load(ValueInput input) {
+            ItemStack firstInput = input.read("FirstInput", ItemStack.CODEC).orElse(ItemStack.EMPTY);
+            ItemStack secondInput = input.read("SecondInput", ItemStack.CODEC).orElse(ItemStack.EMPTY);
+            ItemStack primaryOutput = input.read("PrimaryOutput", ItemStack.CODEC).orElse(ItemStack.EMPTY);
+            ItemStack secondaryOutput = input.read("SecondaryOutput", ItemStack.CODEC).orElse(ItemStack.EMPTY);
+            int cost = input.getIntOr("Cost", 0);
+            if (firstInput.isEmpty()
+                    || secondInput.isEmpty()
+                    || primaryOutput.isEmpty() && secondaryOutput.isEmpty()
+                    || cost <= 0)
+                return null;
+            return new ActiveForging(
+                    firstInput,
+                    secondInput,
+                    primaryOutput,
+                    secondaryOutput,
+                    cost,
+                    BlazeForgerMode.BY_ID.apply(input.getIntOr("Operation", 0)),
+                    input.getBooleanOr("Conflicting", false),
+                    input.getBooleanOr("OverCap", false),
+                    input.getBooleanOr("Special", false),
+                    input.getBooleanOr("StrikeLightning", false));
         }
 
-        @Override
-        protected boolean isSideActive(BlockState state, Direction direction) {
-            return direction.getAxis().isHorizontal();
+        boolean matches(ItemStack first, ItemStack second) {
+            return same(firstInput, first) && same(secondInput, second);
+        }
+
+        private static boolean same(ItemStack expected, ItemStack actual) {
+            return expected.getCount() == actual.getCount() && ItemStack.isSameItemSameComponents(expected, actual);
         }
     }
 }

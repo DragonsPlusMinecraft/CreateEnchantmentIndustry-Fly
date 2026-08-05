@@ -18,12 +18,11 @@
 
 package plus.dragons.createenchantmentindustry.common.kinetics.crusher;
 
-import com.simibubi.create.AllItems;
-import com.simibubi.create.content.kinetics.crusher.CrushingWheelControllerBlock;
-import com.simibubi.create.content.kinetics.crusher.CrushingWheelControllerBlockEntity;
-import net.createmod.catnip.math.VecHelper;
+import com.zurrtum.create.AllItems;
+import com.zurrtum.create.catnip.math.VecHelper;
+import com.zurrtum.create.content.kinetics.crusher.CrushingWheelControllerBlock;
+import com.zurrtum.create.content.kinetics.crusher.CrushingWheelControllerBlockEntity;
 import net.minecraft.core.Direction;
-import net.minecraft.nbt.NbtUtils;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
@@ -52,10 +51,14 @@ public class CrushingWheelExperience {
             nuggets = 1;
 
         Vec3 outputPosition = getOutputPosition(crusher);
-        ItemEntity expItem = new ItemEntity(serverLevel, outputPosition.x(), outputPosition.y(), outputPosition.z(), AllItems.EXP_NUGGET.asStack(nuggets));
+        ItemEntity expItem = new ItemEntity(
+                serverLevel,
+                outputPosition.x(),
+                outputPosition.y(),
+                outputPosition.z(),
+                new net.minecraft.world.item.ItemStack(AllItems.EXP_NUGGET, nuggets));
         expItem.setDeltaMovement(getOutputSpeed(crusher));
-        expItem.getPersistentData()
-                .put("BypassCrushingWheel", NbtUtils.writeBlockPos(crusher.getBlockPos()));
+        expItem.addTag("create_enchantment_industry:bypass_crushing_wheel");
         serverLevel.addFreshEntity(expItem);
     }
 

@@ -1,24 +1,18 @@
 {
-    "type": "minecraft:crafting_shaped",
-    "category": "misc",
-    "key": {
-        "a": {
-            "item": "create:experience_block"
-        },
-        "c": {
-            "item": "create:copper_casing"
-        },
-        "s": {
-            "item": "minecraft:sponge"
-        }
-    },
-    "pattern": [
-        "a",
-        "s",
-        "c"
-    ],
-    "result": {
-        "count": 1,
-        "id": "create_enchantment_industry:experience_lantern"
-    }
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "a": "create:experience_block",
+    "c": "create:copper_casing",
+    "s": "minecraft:sponge"
+  },
+  "pattern": [
+    "a",
+    "s",
+    "c"
+  ],
+  "result": {
+    "count": 1,
+    "id": "create_enchantment_industry:experience_lantern"
+  }
 }

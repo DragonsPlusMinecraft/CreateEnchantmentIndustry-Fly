@@ -18,7 +18,7 @@
 
 package plus.dragons.createenchantmentindustry.mixin;
 
-import com.simibubi.create.foundation.CreateNBTProcessors;
+import com.zurrtum.create.foundation.CreateNBTProcessors;
 import net.minecraft.nbt.CompoundTag;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -27,9 +27,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import plus.dragons.createenchantmentindustry.common.fluids.printer.PrinterBehaviour;
 import plus.dragons.createenchantmentindustry.common.processing.enchanter.EnchanterBehaviour;
 
-@Mixin(CreateNBTProcessors.class)
+@Mixin(value = CreateNBTProcessors.class, remap = false)
 public class CreateNBTProcessorsMixin {
-    @Inject(method = "clipboardProcessor", at = @At("HEAD"))
+    @Inject(method = "clipboardProcessor", at = @At("HEAD"), remap = false)
     private static void clipboardProcessor$removePrintingTemplate(CompoundTag data, CallbackInfoReturnable<CompoundTag> cir) {
         data.remove(PrinterBehaviour.TEMPLATE);
         data.remove(EnchanterBehaviour.TEMPLATE);

@@ -19,11 +19,9 @@
 package plus.dragons.createenchantmentindustry.common.processing.forger;
 
 import com.mojang.serialization.MapCodec;
-import com.simibubi.create.foundation.block.IBE;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -32,11 +30,13 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
-import plus.dragons.createdragonsplus.common.advancements.AdvancementBehaviour;
+import plus.dragons.createenchantmentindustry.common.advancement.AdvancementBehaviour;
 import plus.dragons.createenchantmentindustry.common.fluids.experience.BlazeExperienceBlock;
 import plus.dragons.createenchantmentindustry.common.registry.CEIBlockEntities;
 
 public class BlazeForgerBlock extends BlazeExperienceBlock<BlazeForgerBlockEntity> {
+    public static final MapCodec<BlazeForgerBlock> CODEC = simpleCodec(BlazeForgerBlock::new);
+
     public BlazeForgerBlock(Properties properties) {
         super(properties);
     }
@@ -48,43 +48,44 @@ public class BlazeForgerBlock extends BlazeExperienceBlock<BlazeForgerBlockEntit
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
+    protected InteractionResult useWithoutItem(
+            BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
         var blockEntity = getBlockEntity(level, pos);
         if (blockEntity == null)
             return InteractionResult.PASS;
         ItemStack extracted = blockEntity.extractItem(false);
         if (!extracted.isEmpty()) {
             player.getInventory().placeItemBackInInventory(extracted);
-            return InteractionResult.sidedSuccess(level.isClientSide);
+            return InteractionResult.SUCCESS;
         }
         return InteractionResult.PASS;
     }
 
     @Override
-    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
-        if (stack.isEmpty())
-            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+    protected InteractionResult useItemOn(
+            ItemStack stack,
+            BlockState state,
+            Level level,
+            BlockPos pos,
+            Player player,
+            InteractionHand hand,
+            BlockHitResult hitResult) {
         var result = super.useItemOn(stack, state, level, pos, player, hand, hitResult);
-        if (result.result() != InteractionResult.PASS)
+        if (result != InteractionResult.PASS)
             return result;
         var blockEntity = getBlockEntity(level, pos);
         if (blockEntity == null)
-            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+            return InteractionResult.PASS;
         var remainder = blockEntity.insertItem(stack, false);
         if (ItemStack.isSameItemSameComponents(stack, remainder) && remainder.getCount() == stack.getCount())
-            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+            return InteractionResult.PASS;
         player.setItemInHand(hand, remainder);
-        return ItemInteractionResult.sidedSuccess(level.isClientSide);
-    }
-
-    @Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-        IBE.onRemove(state, level, pos, newState);
+        return InteractionResult.SUCCESS;
     }
 
     @Override
     protected MapCodec<BlazeForgerBlock> codec() {
-        return simpleCodec(BlazeForgerBlock::new);
+        return CODEC;
     }
 
     @Override

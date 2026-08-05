@@ -18,24 +18,14 @@
 
 package plus.dragons.createenchantmentindustry.common.processing.enchanter;
 
-import com.google.common.collect.ImmutableList;
-import com.simibubi.create.AllBlocks;
-import com.simibubi.create.AllItems;
-import com.simibubi.create.AllSoundEvents;
-import com.simibubi.create.api.equipment.goggles.IHaveGoggleInformation;
-import com.simibubi.create.foundation.blockEntity.behaviour.BehaviourType;
-import com.simibubi.create.foundation.blockEntity.behaviour.ValueBoxTransform;
-import com.simibubi.create.foundation.blockEntity.behaviour.ValueSettingsBoard;
-import com.simibubi.create.foundation.blockEntity.behaviour.ValueSettingsFormatter;
-import com.simibubi.create.foundation.blockEntity.behaviour.scrollValue.ScrollValueBehaviour;
-import com.simibubi.create.foundation.utility.CreateLang;
-import com.simibubi.create.infrastructure.config.AllConfigs;
+import com.zurrtum.create.AllBlocks;
+import com.zurrtum.create.AllItems;
+import com.zurrtum.create.AllSoundEvents;
+import com.zurrtum.create.foundation.blockEntity.behaviour.BehaviourType;
+import com.zurrtum.create.foundation.blockEntity.behaviour.scrollValue.ServerScrollValueBehaviour;
 import java.util.List;
-import net.createmod.catnip.lang.LangBuilder;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Direction;
-import net.minecraft.core.HolderLookup.Provider;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -45,46 +35,39 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
-import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.EnchantmentInstance;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.BlockHitResult;
+import plus.dragons.createenchantmentindustry.common.item.CEIItemData;
 import plus.dragons.createenchantmentindustry.common.processing.enchanter.behaviour.EnchantingBehaviour;
 import plus.dragons.createenchantmentindustry.common.processing.enchanter.behaviour.TemplateEnchantingBehaviour;
 import plus.dragons.createenchantmentindustry.util.CEILang;
 
-public class EnchanterBehaviour extends ScrollValueBehaviour implements IHaveGoggleInformation {
+public class EnchanterBehaviour extends ServerScrollValueBehaviour {
     public static final BehaviourType<EnchanterBehaviour> TYPE = new BehaviourType<>();
     public static final String LEVEL = "EnchantingLevel";
     public static final String TEMPLATE = "EnchantingTemplate";
     private final BlazeEnchanterBlockEntity enchanter;
     private ItemStack template = ItemStack.EMPTY;
     private EnchantingBehaviour enchanting = new EnchantingBehaviour();
-    ValueBoxTransform.Sided templateItemTransform;
 
-    public EnchanterBehaviour(BlazeEnchanterBlockEntity enchanter, ValueBoxTransform transform, ValueBoxTransform.Sided templateItemTransform) {
-        super(CEILang.translate("gui.blaze_enchanter.level").component(), enchanter, transform);
+    public EnchanterBehaviour(BlazeEnchanterBlockEntity enchanter) {
+        super(enchanter);
         this.enchanter = enchanter;
-        this.templateItemTransform = templateItemTransform;
-    }
-
-    public ValueBoxTransform getTemplateItemSlotPositioning() {
-        return templateItemTransform;
     }
 
     public boolean canProcess(ItemStack stack) {
-        return enchanting.canProcess(getWorld(), stack, enchanter.special);
-    }
-
-    public float getRenderDistance() {
-        return AllConfigs.client().filterItemRenderDistance.getF();
+        return enchanting.canProcess(blockEntity.getLevel(), stack, enchanter.special);
     }
 
     public void update(ItemStack stack) {
-        enchanting.update(getWorld(), stack, value, enchanter.special, enchanter.cursed, enchanter.getRandom());
+        enchanting.update(
+                blockEntity.getLevel(), stack, value, enchanter.special, enchanter.cursed, enchanter.getRandom());
     }
 
     public ItemStack getResult(ItemStack stack) {
-        return enchanting.getResult(getWorld(), stack, enchanter.getRandom(), enchanter.special);
+        return enchanting.getResult(blockEntity.getLevel(), stack, enchanter.getRandom(), enchanter.special);
     }
 
     public int getExperienceCost() {
@@ -103,7 +86,7 @@ public class EnchanterBehaviour extends ScrollValueBehaviour implements IHaveGog
         if (!loadTemplate(stack))
             return false;
         update(enchanter.heldItem);
-        if (!(getWorld().isClientSide)) {
+        if (!blockEntity.getLevel().isClientSide()) {
             blockEntity.setChanged();
             blockEntity.sendData();
         }
@@ -114,7 +97,7 @@ public class EnchanterBehaviour extends ScrollValueBehaviour implements IHaveGog
         if (stack.isEmpty()) {
             template = ItemStack.EMPTY;
             enchanting = new EnchantingBehaviour();
-        } else if (stack.isEnchantable()) {
+        } else if (stack.getItem() instanceof EnchantingTemplateItem) {
             template = stack;
             enchanting = new TemplateEnchantingBehaviour(template);
         } else return false;
@@ -138,31 +121,22 @@ public class EnchanterBehaviour extends ScrollValueBehaviour implements IHaveGog
     }
 
     @Override
-    public ValueSettingsBoard createBoard(Player player, BlockHitResult hitResult) {
-        int max = enchanter.getMaxEnchantLevel();
-        return new ValueSettingsBoard(
-                label,
-                max,
-                max / 6,
-                ImmutableList.of(label),
-                new ValueSettingsFormatter(ValueSettings::format));
-    }
-
-    @Override
     public void onShortInteract(Player player, InteractionHand hand, Direction side, BlockHitResult hitResult) {
         var stack = player.getItemInHand(hand);
-        if (AllItems.WRENCH.isIn(stack))
+        if (stack.is(AllItems.WRENCH))
             return;
-        if (AllBlocks.MECHANICAL_ARM.isIn(stack))
+        if (stack.is(AllBlocks.MECHANICAL_ARM.asItem()))
             return;
-        var level = getWorld();
+        var level = blockEntity.getLevel();
         var pos = getPos();
         if (stack.isEmpty()) {
             setTemplate(ItemStack.EMPTY);
             level.playSound(null, pos, SoundEvents.ITEM_FRAME_REMOVE_ITEM, SoundSource.BLOCKS, .25f, .1f);
             return;
         }
-        if (!setTemplate(stack.copyWithCount(1))) {
+        ItemStack template = stack.copy();
+        template.setCount(1);
+        if (!setTemplate(template)) {
             player.displayClientMessage(CEILang.translate("gui.blaze_enchanter.template.invalid").component(), true);
             AllSoundEvents.DENY.playOnServer(player.level(), player.blockPosition(), 1, 1);
             return;
@@ -171,20 +145,20 @@ public class EnchanterBehaviour extends ScrollValueBehaviour implements IHaveGog
     }
 
     @Override
-    public void write(CompoundTag nbt, Provider registries, boolean clientPacket) {
-        nbt.putInt(LEVEL, value);
-        nbt.put(TEMPLATE, template.saveOptional(registries));
+    public void write(ValueOutput output, boolean clientPacket) {
+        output.putInt(LEVEL, value);
+        output.store(TEMPLATE, ItemStack.OPTIONAL_CODEC, template);
     }
 
     @Override
-    public void writeSafe(CompoundTag nbt, Provider registries) {
-        nbt.putInt(LEVEL, value);
+    public void writeSafe(ValueOutput output) {
+        output.putInt(LEVEL, value);
     }
 
     @Override
-    public void read(CompoundTag nbt, Provider registries, boolean clientPacket) {
-        value = Math.clamp(nbt.getInt(LEVEL), 0, enchanter.getMaxEnchantLevel());
-        loadTemplate(ItemStack.parseOptional(registries, nbt.getCompound(TEMPLATE)));
+    public void read(ValueInput input, boolean clientPacket) {
+        value = Mth.clamp(input.getIntOr(LEVEL, 0), 0, enchanter.getMaxEnchantLevel());
+        loadTemplate(input.read(TEMPLATE, ItemStack.OPTIONAL_CODEC).orElse(ItemStack.EMPTY));
     }
 
     @Override
@@ -192,7 +166,6 @@ public class EnchanterBehaviour extends ScrollValueBehaviour implements IHaveGog
         loadTemplate(template);
     }
 
-    @Override
     public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
         boolean added = true;
         var style = enchanter.special
@@ -225,14 +198,16 @@ public class EnchanterBehaviour extends ScrollValueBehaviour implements IHaveGog
             addModeHelp(tooltip);
             return true;
         }
-        if (enchanter.processingTime == -1 && !EnchantmentHelper.getEnchantmentsForCrafting(enchanter.heldItem).isEmpty()) {
+        if (enchanter.processingTime == -1
+                && (!CEIItemData.getEnchantments(enchanter.heldItem).isEmpty()
+                        || !CEIItemData.getStoredEnchantments(enchanter.heldItem).isEmpty())) {
             CEILang.translate("gui.goggles.enchanting.completed").style(ChatFormatting.GREEN).forGoggles(tooltip);
             return true;
         }
         boolean canProcess = canProcess(enchanter.heldItem);
         int cost = canProcess ? getExperienceCost() : 0;
         if (canProcess && cost > 0) {
-            LangBuilder mb = CreateLang.translate("generic.unit.millibuckets");
+            CEILang.Builder mb = CEILang.translateCreate("generic.unit.millibuckets");
             CEILang.translate("gui.goggles.enchanting.cost", CEILang.number(cost).add(mb).style(style))
                     .forGoggles(tooltip);
             addAvailableEnchantments(tooltip, isPlayerSneaking);
@@ -270,11 +245,11 @@ public class EnchanterBehaviour extends ScrollValueBehaviour implements IHaveGog
         int limit = isPlayerSneaking ? available.size() : Math.min(available.size(), 6);
         for (int i = 0; i < limit; i++) {
             EnchantmentInstance instance = available.get(i);
-            var name = Enchantment.getFullname(instance.enchantment, instance.level).copy();
-            if (instance.enchantment.is(EnchantmentTags.CURSE)) {
+            var name = Enchantment.getFullname(instance.enchantment(), instance.level()).copy();
+            if (instance.enchantment().is(EnchantmentTags.CURSE)) {
                 name.append(" ?");
             }
-            ChatFormatting style = instance.enchantment.is(EnchantmentTags.CURSE)
+            ChatFormatting style = instance.enchantment().is(EnchantmentTags.CURSE)
                     ? ChatFormatting.RED
                     : ChatFormatting.GRAY;
             CEILang.builder().add(name).style(style).forGoggles(tooltip, 1);

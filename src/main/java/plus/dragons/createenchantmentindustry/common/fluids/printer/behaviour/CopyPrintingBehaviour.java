@@ -19,10 +19,11 @@
 package plus.dragons.createenchantmentindustry.common.fluids.printer.behaviour;
 
 import com.mojang.serialization.DataResult;
-import com.simibubi.create.AllItems;
-import com.simibubi.create.foundation.blockEntity.behaviour.fluid.SmartFluidTankBehaviour;
-import com.simibubi.create.foundation.recipe.ItemCopyingRecipe.SupportsItemCopying;
-import com.simibubi.create.foundation.utility.CreateLang;
+import com.zurrtum.create.AllDataComponents;
+import com.zurrtum.create.AllItems;
+import com.zurrtum.create.foundation.blockEntity.behaviour.fluid.SmartFluidTankBehaviour;
+import com.zurrtum.create.foundation.recipe.ItemCopyingRecipe.SupportsItemCopying;
+import com.zurrtum.create.infrastructure.fluids.FluidStack;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.ChatFormatting;
@@ -31,11 +32,11 @@ import net.minecraft.core.component.DataComponentType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.fluids.FluidStack;
 import plus.dragons.createenchantmentindustry.common.CEICommon;
 import plus.dragons.createenchantmentindustry.common.fluids.printer.PrinterBlockEntity;
 import plus.dragons.createenchantmentindustry.common.registry.CEIDataMaps;
 import plus.dragons.createenchantmentindustry.config.CEIConfig;
+import plus.dragons.createenchantmentindustry.util.CEIFluidUnits;
 import plus.dragons.createenchantmentindustry.util.CEILang;
 
 public class CopyPrintingBehaviour implements PrintingBehaviour {
@@ -77,8 +78,8 @@ public class CopyPrintingBehaviour implements PrintingBehaviour {
 
     @Override
     public int getRequiredFluidAmount(Level level, ItemStack stack, FluidStack fluidStack) {
-        var amount = fluidStack.getFluidHolder().getData(CEIDataMaps.PRINTING_COPY_INGREDIENT);
-        return amount == null ? 0 : amount;
+        var amount = CEIDataMaps.PRINTING_COPY_INGREDIENT.get(fluidStack.getFluid());
+        return amount == null ? 0 : Math.toIntExact(CEIFluidUnits.millibuckets(amount));
     }
 
     @Override
@@ -96,11 +97,11 @@ public class CopyPrintingBehaviour implements PrintingBehaviour {
     public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
         CEILang.translate("gui.goggles.printing.copy").forGoggles(tooltip);
         CEILang.item(original).style(ChatFormatting.GRAY).forGoggles(tooltip, 1);
-        var amount = tank.getPrimaryHandler().getFluid().getFluidHolder().getData(CEIDataMaps.PRINTING_COPY_INGREDIENT);
+        var amount = CEIDataMaps.PRINTING_COPY_INGREDIENT.get(tank.getPrimaryHandler().getFluid().getFluid());
         if (amount != null)
             CEILang.translate("gui.goggles.printing.cost",
                     CEILang.number(amount)
-                            .add(CreateLang.translate("generic.unit.millibuckets"))
+                            .add(CEILang.translateCreate("generic.unit.millibuckets"))
                             .style(amount <= CEIConfig.fluids().printerFluidCapacity.get()
                                     ? ChatFormatting.GREEN
                                     : ChatFormatting.RED))
@@ -131,7 +132,7 @@ public class CopyPrintingBehaviour implements PrintingBehaviour {
 
         @Override
         public DataComponentType<?> getComponentType() {
-            throw new UnsupportedOperationException("this method should not be called!");
+            return AllDataComponents.SCHEMATIC_FILE;
         }
     }
 }

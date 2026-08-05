@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "id": "${mod_id}",
+  "version": "${version}",
+  "name": "${mod_name}",
+  "description": "${mod_description}",
+  "authors": [
+    "${mod_authors}"
+  ],
+  "contact": {
+    "homepage": "${mod_github}",
+    "sources": "${mod_github}",
+    "issues": "${mod_github}/issues"
+  },
+  "license": "${mod_license}",
+  "icon": "icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "plus.dragons.createenchantmentindustry.common.CEICommon"
+    ],
+    "client": [
+      "plus.dragons.createenchantmentindustry.client.CEIClient"
+    ],
+    "fabric-datagen": [
+      "plus.dragons.createenchantmentindustry.data.CEIData"
+    ],
+    "jei_mod_plugin": [
+      "plus.dragons.createenchantmentindustry.integration.jei.category.CEIJeiPlugin"
+    ],
+    "create_plugin": [
+      "plus.dragons.createenchantmentindustry.common.registry.CEICreatePlugin"
+    ]
+  },
+  "accessWidener": "create_enchantment_industry.accesswidener",
+  "mixins": [
+    "create_enchantment_industry.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-api": ">=${fabric_api_version}",
+    "minecraft": "${minecraft_version}",
+    "java": ">=21",
+    "create": "${create_version_range}",
+    "create_dragons_plus": "${create_dragons_plus_version}"
+  },
+  "suggests": {
+    "jei": "${jei_version}"
+  }
+}

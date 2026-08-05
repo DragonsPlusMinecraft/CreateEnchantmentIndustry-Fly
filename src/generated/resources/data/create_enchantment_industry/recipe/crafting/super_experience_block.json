@@ -1,18 +1,16 @@
 {
-    "type": "minecraft:crafting_shaped",
-    "category": "misc",
-    "key": {
-        "n": {
-            "item": "create_enchantment_industry:super_experience_nugget"
-        }
-    },
-    "pattern": [
-        "nnn",
-        "nnn",
-        "nnn"
-    ],
-    "result": {
-        "count": 1,
-        "id": "create_enchantment_industry:super_experience_block"
-    }
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "n": "create_enchantment_industry:super_experience_nugget"
+  },
+  "pattern": [
+    "nnn",
+    "nnn",
+    "nnn"
+  ],
+  "result": {
+    "count": 1,
+    "id": "create_enchantment_industry:super_experience_block"
+  }
 }

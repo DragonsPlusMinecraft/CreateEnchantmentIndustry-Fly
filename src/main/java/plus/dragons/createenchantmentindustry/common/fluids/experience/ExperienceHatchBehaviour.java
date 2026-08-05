@@ -18,86 +18,83 @@
 
 package plus.dragons.createenchantmentindustry.common.fluids.experience;
 
-import com.simibubi.create.content.logistics.filter.FilterItemStack;
-import com.simibubi.create.foundation.blockEntity.SmartBlockEntity;
-import com.simibubi.create.foundation.blockEntity.behaviour.BehaviourType;
-import com.simibubi.create.foundation.blockEntity.behaviour.ValueBoxTransform;
-import com.simibubi.create.foundation.blockEntity.behaviour.ValueSettingsBoard;
-import com.simibubi.create.foundation.blockEntity.behaviour.ValueSettingsFormatter;
-import com.simibubi.create.foundation.blockEntity.behaviour.filtering.FilteringBehaviour;
-import java.util.List;
-import net.minecraft.core.Holder;
-import net.minecraft.core.HolderLookup.Provider;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
+import com.zurrtum.create.content.logistics.filter.FilterItemStack;
+import com.zurrtum.create.foundation.blockEntity.SmartBlockEntity;
+import com.zurrtum.create.foundation.blockEntity.behaviour.ValueSettings;
+import com.zurrtum.create.foundation.blockEntity.behaviour.filtering.ServerFilteringBehaviour;
+import com.zurrtum.create.infrastructure.fluids.FluidStack;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
-import net.minecraft.world.phys.BlockHitResult;
-import net.neoforged.neoforge.fluids.FluidStack;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import plus.dragons.createenchantmentindustry.common.registry.CEIDataMaps;
 import plus.dragons.createenchantmentindustry.common.registry.CEIFluids;
-import plus.dragons.createenchantmentindustry.util.CEILang;
+import plus.dragons.createenchantmentindustry.util.CEIFluidUnits;
 
-public class ExperienceHatchBehaviour extends FilteringBehaviour {
-    public static final BehaviourType<ExperienceHatchBehaviour> TYPE = new BehaviourType<>();
+/** Server-side experience-fluid filter and exchange amount. */
+public class ExperienceHatchBehaviour extends ServerFilteringBehaviour {
     public static final int POINTS_PER_SCROLL = 10;
 
-    public ExperienceHatchBehaviour(SmartBlockEntity blockEntity, ValueBoxTransform slot) {
-        super(blockEntity, slot);
+    public ExperienceHatchBehaviour(SmartBlockEntity blockEntity) {
+        super(blockEntity);
         forFluids();
         count = 0;
     }
 
     public FluidStack getFluidToDrain() {
-        Holder<Fluid> fluid = filter.fluid(getWorld()).getFluidHolder();
+        Fluid fluid = filter.fluid(blockEntity.getLevel()).getFluid();
         int unit;
-        if (Fluids.EMPTY.isSame(fluid.value())) {
+        if (Fluids.EMPTY.isSame(fluid)) {
             unit = 1;
-            fluid = CEIFluids.EXPERIENCE;
-        } else unit = ExperienceHelper.getExperienceFluidUnit(fluid);
+            fluid = CEIFluids.EXPERIENCE.getSource();
+        } else {
+            unit = ExperienceHelper.getExperienceFluidUnit(fluid);
+        }
         if (unit == 0)
             return FluidStack.EMPTY;
-        int amount = count * POINTS_PER_SCROLL;
-        amount = count == 0 ? Integer.MAX_VALUE : amount * unit;
+        int amount = count == 0
+                ? Integer.MAX_VALUE
+                : Math.toIntExact(CEIFluidUnits.millibuckets(Math.multiplyExact((long) count * POINTS_PER_SCROLL, unit)));
         return new FluidStack(fluid, amount);
     }
 
     public FluidStack getFluidToFill(int available) {
         if (available == 0)
             return FluidStack.EMPTY;
-        Holder<Fluid> fluid = filter.fluid(getWorld()).getFluidHolder();
+        Fluid fluid = filter.fluid(blockEntity.getLevel()).getFluid();
         int unit;
-        if (Fluids.EMPTY.isSame(fluid.value())) {
+        if (Fluids.EMPTY.isSame(fluid)) {
             unit = 1;
-            fluid = CEIFluids.EXPERIENCE;
-        } else unit = ExperienceHelper.getExperienceFluidUnit(fluid);
+            fluid = CEIFluids.EXPERIENCE.getSource();
+        } else {
+            unit = ExperienceHelper.getExperienceFluidUnit(fluid);
+        }
         if (unit == 0)
             return FluidStack.EMPTY;
-        int amount = count * POINTS_PER_SCROLL;
-        amount = count == 0 ? available : Math.min(available, amount * unit);
+        long points = count == 0 ? available : Math.min((long) available, (long) count * POINTS_PER_SCROLL);
+        int amount = Math.toIntExact(CEIFluidUnits.millibuckets(Math.multiplyExact(points, unit)));
         return new FluidStack(fluid, amount);
     }
 
     @Override
-    public void write(CompoundTag nbt, Provider registries, boolean clientPacket) {
-        nbt.put("Filter", getFilter().saveOptional(registries));
-        nbt.putInt("Scroll", count);
+    public void write(ValueOutput output, boolean clientPacket) {
+        output.store("Filter", FilterItemStack.CODEC, filter);
+        output.putInt("Scroll", count);
     }
 
     @Override
-    public void read(CompoundTag nbt, Provider registries, boolean clientPacket) {
-        filter = FilterItemStack.of(registries, nbt.getCompound("Filter"));
-        count = nbt.getInt("Scroll");
+    public void read(ValueInput input, boolean clientPacket) {
+        filter = input.read("Filter", FilterItemStack.CODEC).orElseGet(FilterItemStack::empty);
+        count = input.getIntOr("Scroll", 0);
     }
 
     @Override
     public void setValueSettings(Player player, ValueSettings settings, boolean ctrlDown) {
         if (getValueSettings().equals(settings))
             return;
-        count = settings.value();
+        count = Math.max(0, settings.value());
         blockEntity.setChanged();
         blockEntity.sendData();
         playFeedbackSound(this);
@@ -114,39 +111,15 @@ public class ExperienceHatchBehaviour extends FilteringBehaviour {
     }
 
     @Override
-    public ValueSettingsBoard createBoard(Player player, BlockHitResult hitResult) {
-        return new ValueSettingsBoard(
-                CEILang.translate("gui.experience_hatch.exchange").component(),
-                100,
-                10,
-                List.of(CEILang.translate("gui.experience_hatch.points").component()),
-                new ValueSettingsFormatter(this::formatValue));
-    }
-
-    @Override
-    public MutableComponent formatValue(ValueSettings value) {
-        int count = value.value();
-        if (count == 0)
-            return CEILang.translate("gui.experience_hatch.all").component();
-        return Component.literal(String.valueOf(count * POINTS_PER_SCROLL));
-    }
-
-    @Override
-    public MutableComponent getCountLabelForValueBox() {
-        if (count == 0)
-            return Component.literal("*");
-        return Component.literal(String.valueOf(count * POINTS_PER_SCROLL));
-    }
-
-    @Override
     public boolean setFilter(ItemStack stack) {
-        FilterItemStack filter = FilterItemStack.of(stack.copy());
-        if (!filter.isEmpty()) {
-            FluidStack fluid = filter.fluid(getWorld());
-            if (!fluid.is(CEIFluids.EXPERIENCE) && fluid.getFluidHolder().getData(CEIDataMaps.FLUID_UNIT_EXPERIENCE) == null)
+        FilterItemStack candidate = FilterItemStack.of(stack.copy());
+        if (!candidate.isEmpty()) {
+            FluidStack fluid = candidate.fluid(blockEntity.getLevel());
+            if (fluid.getFluid() != CEIFluids.EXPERIENCE.getSource()
+                    && CEIDataMaps.FLUID_UNIT_EXPERIENCE.get(fluid.getFluid()) == null)
                 return false;
         }
-        this.filter = filter;
+        filter = candidate;
         blockEntity.setChanged();
         blockEntity.sendData();
         return true;
@@ -155,10 +128,5 @@ public class ExperienceHatchBehaviour extends FilteringBehaviour {
     @Override
     public String getClipboardKey() {
         return "ExperienceHatch";
-    }
-
-    @Override
-    public BehaviourType<?> getType() {
-        return TYPE;
     }
 }

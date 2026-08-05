@@ -20,42 +20,46 @@ package plus.dragons.createenchantmentindustry.common.processing.enchanter;
 
 import com.google.common.collect.Lists;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.random.WeightedRandom;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.EnchantmentInstance;
-import net.minecraft.world.item.enchantment.ItemEnchantments;
 import plus.dragons.createenchantmentindustry.common.fluids.experience.ExperienceHelper;
 import plus.dragons.createenchantmentindustry.common.processing.EnchantmentProcessingRules;
 import plus.dragons.createenchantmentindustry.config.CEIConfig;
 
 public class CEIEnchantmentHelper {
     @Nullable
-    public static Function<Holder<Enchantment>, Integer> alternativeMaxLevel;
+    public static Function<Enchantment, Integer> alternativeMaxLevel;
 
-    public static int getEnchantmentCost(Holder<Enchantment> holder, int level) {
-        var enchantment = holder.value();
-        int cost = ExperienceHelper.getExperienceForNextLevel(enchantment.getMinCost(level));
+    public static int getEnchantmentCost(Holder<Enchantment> enchantment, int level) {
+        int cost = ExperienceHelper.getExperienceForNextLevel(enchantment.value().getMinCost(level));
         if (level == 1)
             return cost;
-        return cost + getEnchantmentCost(holder, level - 1);
+        return cost + getEnchantmentCost(enchantment, level - 1);
     }
 
-    public static int getEnchantmentCost(ItemEnchantments enchantments) {
+    public static int getEnchantmentCost(Map<Holder<Enchantment>, Integer> enchantments) {
         return enchantments.entrySet().stream()
-                .mapToInt(entry -> getEnchantmentCost(entry.getKey(), entry.getIntValue()))
+                .mapToInt(entry -> getEnchantmentCost(entry.getKey(), entry.getValue()))
                 .sum();
     }
 
     public static int getAdjustedLevel(ItemStack stack, int level) {
-        var value = stack.getEnchantmentValue();
+        if (stack.isEmpty() || level <= 0)
+            return 0;
+        var enchantable = stack.get(DataComponents.ENCHANTABLE);
+        int value = enchantable == null ? 0 : enchantable.value();
         if (value > 0)
             level += 1 + value / 4;
         float f = 0.15F;
@@ -63,16 +67,19 @@ public class CEIEnchantmentHelper {
         return level;
     }
 
+    public static boolean canApplyAtEnchantingTable(Holder<Enchantment> enchantment, ItemStack stack) {
+        return stack.is(Items.BOOK) || enchantment.value().canEnchant(stack);
+    }
+
     public static List<EnchantmentInstance> getAvailableEnchantmentResults(int level, Stream<Holder<Enchantment>> possibleEnchantments, boolean special) {
         List<EnchantmentInstance> list = Lists.newArrayList();
-        possibleEnchantments.forEach(holder -> {
-            Enchantment enchantment = holder.value();
-            int maxLevel = maxLevel(holder);
+        possibleEnchantments.forEach(enchantment -> {
+            int maxLevel = maxLevel(enchantment);
             if (special)
-                maxLevel += EnchantmentProcessingRules.blazeEnchanterLevelExtension(holder);
-            for (int i = maxLevel; i >= enchantment.getMinLevel(); i--) {
-                if (level >= enchantment.getMinCost(i) && level <= enchantment.getMaxCost(i)) {
-                    list.add(new EnchantmentInstance(holder, i));
+                maxLevel += EnchantmentProcessingRules.blazeEnchanterLevelExtension(enchantment);
+            for (int i = maxLevel; i >= enchantment.value().getMinLevel(); i--) {
+                if (level >= enchantment.value().getMinCost(i) && level <= enchantment.value().getMaxCost(i)) {
+                    list.add(new EnchantmentInstance(enchantment, i));
                     break;
                 }
             }
@@ -84,11 +91,10 @@ public class CEIEnchantmentHelper {
         List<EnchantmentInstance> list = Lists.newArrayList();
         if (maxPenaltyLevel <= 0)
             return list;
-        possibleEnchantments.forEach(holder -> {
-            Enchantment enchantment = holder.value();
-            int level = Math.min(maxLevel(holder), maxPenaltyLevel);
-            if (level >= enchantment.getMinLevel())
-                list.add(new EnchantmentInstance(holder, level));
+        possibleEnchantments.forEach(enchantment -> {
+            int level = Math.min(maxLevel(enchantment), maxPenaltyLevel);
+            if (level >= enchantment.value().getMinLevel())
+                list.add(new EnchantmentInstance(enchantment, level));
         });
         return list;
     }
@@ -96,17 +102,17 @@ public class CEIEnchantmentHelper {
     public static List<EnchantmentInstance> selectEnchantments(RandomSource random, int adjustedLevel, List<EnchantmentInstance> available, boolean special) {
         available = Lists.newArrayList(available);
         List<EnchantmentInstance> list = Lists.newArrayList();
-        WeightedRandom.getRandomItem(random, available).ifPresent(list::add);
+        WeightedRandom.getRandomItem(random, available, EnchantmentInstance::weight).ifPresent(list::add);
         while (random.nextInt(50) <= adjustedLevel) {
             if (!list.isEmpty())
                 if (special && CEIConfig.enchantments().ignoreEnchantmentCompatibility.get()) {
-                    available.removeIf(instance -> instance.enchantment.equals(list.getLast().enchantment));
+                    available.removeIf(instance -> instance.enchantment().equals(list.getLast().enchantment()));
                 } else {
-                    EnchantmentHelper.filterCompatibleEnchantments(available, list.getLast());
+                    EnchantmentHelper.filterCompatibleEnchantments(available, list.get(list.size() - 1));
                 }
             if (available.isEmpty())
                 break;
-            WeightedRandom.getRandomItem(random, available).ifPresent(list::add);
+            WeightedRandom.getRandomItem(random, available, EnchantmentInstance::weight).ifPresent(list::add);
             adjustedLevel /= 2;
         }
         return list;
@@ -114,7 +120,11 @@ public class CEIEnchantmentHelper {
 
     public static int maxLevel(Holder<Enchantment> enchantment) {
         if (alternativeMaxLevel == null) return enchantment.value().getMaxLevel();
-        return alternativeMaxLevel.apply(enchantment);
+        return alternativeMaxLevel.apply(enchantment.value());
+    }
+
+    public static int anvilCost(Holder<Enchantment> enchantment) {
+        return enchantment.value().getAnvilCost();
     }
 
     @Deprecated(forRemoval = false)

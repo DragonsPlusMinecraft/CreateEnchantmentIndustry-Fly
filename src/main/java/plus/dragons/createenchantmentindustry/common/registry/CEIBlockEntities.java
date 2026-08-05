@@ -18,98 +18,87 @@
 
 package plus.dragons.createenchantmentindustry.common.registry;
 
-import static plus.dragons.createenchantmentindustry.common.CEICommon.REGISTRATE;
-
-import com.simibubi.create.content.kinetics.base.KineticBlockEntity;
-import com.simibubi.create.content.kinetics.base.KineticBlockEntityRenderer;
-import com.simibubi.create.content.kinetics.base.SingleAxisRotatingVisual;
-import com.simibubi.create.foundation.blockEntity.renderer.SmartBlockEntityRenderer;
-import com.tterrag.registrate.util.entry.BlockEntityEntry;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
-import plus.dragons.createdragonsplus.common.processing.blaze.BlazeBlockVisual;
-import plus.dragons.createenchantmentindustry.client.model.CEIPartialModels;
+import com.zurrtum.create.content.kinetics.base.KineticBlockEntity;
+import net.fabricmc.fabric.api.object.builder.v1.block.entity.FabricBlockEntityTypeBuilder;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidStorage;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemStorage;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockState;
+import plus.dragons.createenchantmentindustry.common.CEICommon;
 import plus.dragons.createenchantmentindustry.common.fluids.experience.ExperienceHatchBlockEntity;
 import plus.dragons.createenchantmentindustry.common.fluids.lantern.ExperienceLanternBlockEntity;
 import plus.dragons.createenchantmentindustry.common.fluids.printer.PrinterBlockEntity;
-import plus.dragons.createenchantmentindustry.common.fluids.printer.PrinterRenderer;
 import plus.dragons.createenchantmentindustry.common.kinetics.grindstone.GrindstoneDrainBlockEntity;
-import plus.dragons.createenchantmentindustry.common.kinetics.grindstone.GrindstoneDrainRenderer;
 import plus.dragons.createenchantmentindustry.common.processing.classic_enchanter.ClassicBlazeEnchanterBlockEntity;
-import plus.dragons.createenchantmentindustry.common.processing.classic_enchanter.ClassicBlazeEnchanterRenderer;
-import plus.dragons.createenchantmentindustry.common.processing.classic_enchanter.ClassicBlazeEnchanterVisual;
 import plus.dragons.createenchantmentindustry.common.processing.enchanter.BlazeEnchanterBlockEntity;
-import plus.dragons.createenchantmentindustry.common.processing.enchanter.BlazeEnchanterRenderer;
 import plus.dragons.createenchantmentindustry.common.processing.forger.BlazeForgerBlockEntity;
-import plus.dragons.createenchantmentindustry.common.processing.forger.BlazeForgerRenderer;
 
-public class CEIBlockEntities {
-    public static final BlockEntityEntry<KineticBlockEntity> MECHANICAL_GRINDSTONE = REGISTRATE
-            .blockEntity("mechanical_grindstone", KineticBlockEntity::new)
-            .visual(() -> SingleAxisRotatingVisual.of(CEIPartialModels.MECHANICAL_GRINDSTONE), false)
-            .renderer(() -> KineticBlockEntityRenderer::new)
-            .validBlock(CEIBlocks.MECHANICAL_GRINDSTONE)
-            .register();
-    public static final BlockEntityEntry<GrindstoneDrainBlockEntity> GRINDSTONE_DRAIN = REGISTRATE
-            .blockEntity("grindstone_drain", GrindstoneDrainBlockEntity::new)
-            .visual(() -> SingleAxisRotatingVisual.of(CEIPartialModels.MECHANICAL_GRINDSTONE), true)
-            .renderer(() -> GrindstoneDrainRenderer::new)
-            .validBlock(CEIBlocks.GRINDSTONE_DRAIN)
-            .register();
-    public static final BlockEntityEntry<ExperienceHatchBlockEntity> EXPERIENCE_HATCH = REGISTRATE
-            .blockEntity("experience_hatch", ExperienceHatchBlockEntity::new)
-            .renderer(() -> SmartBlockEntityRenderer::new)
-            .validBlock(CEIBlocks.EXPERIENCE_HATCH)
-            .register();
-    public static final BlockEntityEntry<PrinterBlockEntity> PRINTER = REGISTRATE
-            .blockEntity("printer", PrinterBlockEntity::new)
-            .renderer(() -> PrinterRenderer::new)
-            .validBlock(CEIBlocks.PRINTER)
-            .register();
-    public static final BlockEntityEntry<BlazeEnchanterBlockEntity> BLAZE_ENCHANTER = REGISTRATE
-            .blockEntity("blaze_enchanter", BlazeEnchanterBlockEntity::new)
-            .visual(() -> BlazeBlockVisual::new)
-            .renderer(() -> BlazeEnchanterRenderer::new)
-            .validBlock(CEIBlocks.BLAZE_ENCHANTER)
-            .register();
-    public static final BlockEntityEntry<BlazeForgerBlockEntity> BLAZE_FORGER = REGISTRATE
-            .blockEntity("blaze_forger", BlazeForgerBlockEntity::new)
-            .visual(() -> BlazeBlockVisual::new)
-            .renderer(() -> BlazeForgerRenderer::new)
-            .validBlock(CEIBlocks.BLAZE_FORGER)
-            .register();
-    public static final BlockEntityEntry<ClassicBlazeEnchanterBlockEntity> CLASSIC_BLAZE_ENCHANTER = REGISTRATE
-            .blockEntity("classic_blaze_enchanter", ClassicBlazeEnchanterBlockEntity::new)
-            .visual(() -> ClassicBlazeEnchanterVisual::new)
-            .renderer(() -> ClassicBlazeEnchanterRenderer::new)
-            .validBlock(CEIBlocks.CLASSIC_BLAZE_ENCHANTER)
-            .register();
-    public static final BlockEntityEntry<ExperienceLanternBlockEntity> EXPERIENCE_LANTERN = REGISTRATE
-            .blockEntity("experience_lantern", ExperienceLanternBlockEntity::new)
-            .validBlock(CEIBlocks.EXPERIENCE_LANTERN)
-            .register();
+/** Server-safe block-entity type registry. Rendering and visuals are installed by CEIClient. */
+public final class CEIBlockEntities {
+    public static final CEIRegistryEntry<BlockEntityType<KineticBlockEntity>> MECHANICAL_GRINDSTONE = register(
+            "mechanical_grindstone", KineticBlockEntity::new, CEIBlocks.MECHANICAL_GRINDSTONE.get());
+    public static final CEIRegistryEntry<BlockEntityType<GrindstoneDrainBlockEntity>> GRINDSTONE_DRAIN = register(
+            "grindstone_drain", GrindstoneDrainBlockEntity::new, CEIBlocks.GRINDSTONE_DRAIN.get());
+    public static final CEIRegistryEntry<BlockEntityType<ExperienceHatchBlockEntity>> EXPERIENCE_HATCH = register(
+            "experience_hatch", ExperienceHatchBlockEntity::new, CEIBlocks.EXPERIENCE_HATCH.get());
+    public static final CEIRegistryEntry<BlockEntityType<PrinterBlockEntity>> PRINTER = register(
+            "printer", PrinterBlockEntity::new, CEIBlocks.PRINTER.get());
+    public static final CEIRegistryEntry<BlockEntityType<BlazeEnchanterBlockEntity>> BLAZE_ENCHANTER = register(
+            "blaze_enchanter", BlazeEnchanterBlockEntity::new, CEIBlocks.BLAZE_ENCHANTER.get());
+    public static final CEIRegistryEntry<BlockEntityType<BlazeForgerBlockEntity>> BLAZE_FORGER = register(
+            "blaze_forger", BlazeForgerBlockEntity::new, CEIBlocks.BLAZE_FORGER.get());
+    public static final CEIRegistryEntry<BlockEntityType<ClassicBlazeEnchanterBlockEntity>> CLASSIC_BLAZE_ENCHANTER = register(
+            "classic_blaze_enchanter",
+            ClassicBlazeEnchanterBlockEntity::new,
+            CEIBlocks.CLASSIC_BLAZE_ENCHANTER.get());
+    public static final CEIRegistryEntry<BlockEntityType<ExperienceLanternBlockEntity>> EXPERIENCE_LANTERN = register(
+            "experience_lantern", ExperienceLanternBlockEntity::new, CEIBlocks.EXPERIENCE_LANTERN.get());
 
-    public static void register(IEventBus modBus) {
-        modBus.register(CEIBlockEntities.class);
+    private static boolean storageProvidersRegistered;
+
+    private CEIBlockEntities() {}
+
+    public static void register() {
+        // Class initialization performs the ordered vanilla registrations above.
     }
 
-    @SubscribeEvent
-    public static void registerCapabilities(final RegisterCapabilitiesEvent event) {
-        event.registerBlockEntity(Capabilities.ItemHandler.BLOCK,
-                GRINDSTONE_DRAIN.get(), GrindstoneDrainBlockEntity::getItemHandler);
-        event.registerBlockEntity(Capabilities.FluidHandler.BLOCK,
-                GRINDSTONE_DRAIN.get(), GrindstoneDrainBlockEntity::getFluidHandler);
-        event.registerBlockEntity(Capabilities.FluidHandler.BLOCK,
-                PRINTER.get(), PrinterBlockEntity::getFluidHandler);
-        event.registerBlockEntity(Capabilities.FluidHandler.BLOCK,
-                BLAZE_ENCHANTER.get(), BlazeEnchanterBlockEntity::getFluidHandler);
-        event.registerBlockEntity(Capabilities.FluidHandler.BLOCK,
-                BLAZE_FORGER.get(), BlazeForgerBlockEntity::getFluidHandler);
-        event.registerBlockEntity(Capabilities.FluidHandler.BLOCK,
-                CLASSIC_BLAZE_ENCHANTER.get(), ClassicBlazeEnchanterBlockEntity::getFluidHandler);
-        event.registerBlockEntity(Capabilities.FluidHandler.BLOCK,
-                EXPERIENCE_LANTERN.get(), ExperienceLanternBlockEntity::getFluidHandler);
+    public static synchronized void registerStorageProviders() {
+        if (storageProvidersRegistered) {
+            return;
+        }
+        storageProvidersRegistered = true;
+        FluidStorage.SIDED.registerForBlockEntity(GrindstoneDrainBlockEntity::getFluidStorage, GRINDSTONE_DRAIN.get());
+        ItemStorage.SIDED.registerForBlockEntity(GrindstoneDrainBlockEntity::getItemStorage, GRINDSTONE_DRAIN.get());
+        FluidStorage.SIDED.registerForBlockEntity(PrinterBlockEntity::getFluidStorage, PRINTER.get());
+        FluidStorage.SIDED.registerForBlockEntity(BlazeEnchanterBlockEntity::getFluidStorage, BLAZE_ENCHANTER.get());
+        FluidStorage.SIDED.registerForBlockEntity(BlazeForgerBlockEntity::getFluidStorage, BLAZE_FORGER.get());
+        FluidStorage.SIDED.registerForBlockEntity(
+                ClassicBlazeEnchanterBlockEntity::getFluidStorage, CLASSIC_BLAZE_ENCHANTER.get());
+        FluidStorage.SIDED.registerForBlockEntity(
+                ExperienceLanternBlockEntity::getFluidStorage, EXPERIENCE_LANTERN.get());
+    }
+
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    private static <T extends BlockEntity> CEIRegistryEntry<BlockEntityType<T>> register(
+            String path, Factory<T> factory, Block... blocks) {
+        Identifier id = CEICommon.asResource(path);
+        BlockEntityType<T>[] holder = new BlockEntityType[1];
+        BlockEntityType<T> type = FabricBlockEntityTypeBuilder
+                .create((pos, state) -> factory.create(holder[0], pos, state), blocks)
+                .build();
+        holder[0] = type;
+        Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, id, type);
+        return new CEIRegistryEntry<>(id, type);
+    }
+
+    @FunctionalInterface
+    private interface Factory<T extends BlockEntity> {
+        T create(BlockEntityType<?> type, BlockPos pos, BlockState state);
     }
 }

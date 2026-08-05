@@ -18,7 +18,7 @@
 
 package plus.dragons.createenchantmentindustry.config;
 
-import net.createmod.catnip.config.ConfigBase;
+import com.zurrtum.create.catnip.config.ConfigBase;
 
 public class CEIEnchantmentsConfig extends ConfigBase {
     public final ConfigInt blazeEnchanterMaxEnchantLevel = i(30, 0,

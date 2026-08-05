@@ -19,19 +19,25 @@
 package plus.dragons.createenchantmentindustry.common.fluids.printer.behaviour;
 
 import com.mojang.serialization.DataResult;
-import com.simibubi.create.api.equipment.goggles.IHaveGoggleInformation;
-import com.simibubi.create.foundation.blockEntity.behaviour.fluid.SmartFluidTankBehaviour;
+import com.zurrtum.create.foundation.blockEntity.behaviour.fluid.SmartFluidTankBehaviour;
+import com.zurrtum.create.infrastructure.fluids.FluidStack;
+import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Registry;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.fluids.FluidStack;
 import plus.dragons.createenchantmentindustry.common.fluids.printer.PrinterBlockEntity;
 
-public interface PrintingBehaviour extends IHaveGoggleInformation {
-    /** NeoForge registry used by addons to register custom Printer template behaviours. */
-    Registry<PrintingBehaviourProvider> REGISTRY = PrintingBehaviourRegistry.REGISTRY;
+public interface PrintingBehaviour {
+    static void register(Identifier id, Provider provider) {
+        PrintingBehaviourRegistry.register(id, provider);
+    }
+
+    static void register(Identifier id, int priority, Provider provider) {
+        PrintingBehaviourRegistry.register(id, priority, provider);
+    }
 
     static DataResult<PrintingBehaviour> create(Level level, SmartFluidTankBehaviour tank, ItemStack stack) {
         return PrintingBehaviourRegistry.create(level, tank, stack);
@@ -43,6 +49,10 @@ public interface PrintingBehaviour extends IHaveGoggleInformation {
 
     default boolean isSafeNBT() {
         return true;
+    }
+
+    default boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
+        return false;
     }
 
     int getRequiredItemCount(Level level, ItemStack stack);

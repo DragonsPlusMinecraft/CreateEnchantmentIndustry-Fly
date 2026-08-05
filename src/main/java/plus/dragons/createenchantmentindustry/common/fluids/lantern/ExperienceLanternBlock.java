@@ -18,12 +18,11 @@
 
 package plus.dragons.createenchantmentindustry.common.fluids.lantern;
 
-import com.simibubi.create.foundation.block.IBE;
-import com.simibubi.create.foundation.block.WrenchableDirectionalBlock;
+import com.zurrtum.create.foundation.block.IBE;
+import com.zurrtum.create.foundation.block.WrenchableDirectionalBlock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
@@ -49,16 +48,6 @@ public class ExperienceLanternBlock extends WrenchableDirectionalBlock implement
     }
 
     @Override
-    public void onRemove(BlockState pState, Level pLevel, BlockPos pPos, BlockState pNewState, boolean pMovedByPiston) {
-        IBE.onRemove(pState, pLevel, pPos, pNewState);
-    }
-
-    @Override
-    protected int getLightBlock(BlockState state, BlockGetter level, BlockPos pos) {
-        return super.getLightBlock(state, level, pos);
-    }
-
-    @Override
     public Class<ExperienceLanternBlockEntity> getBlockEntityClass() {
         return ExperienceLanternBlockEntity.class;
     }
@@ -76,15 +65,5 @@ public class ExperienceLanternBlock extends WrenchableDirectionalBlock implement
     @Override
     public VoxelShape getShape(BlockState pState, BlockGetter pLevel, BlockPos pPos, CollisionContext pContext) {
         return CEIShapes.LANTERN_SHAPE.get(pState.getValue(FACING));
-    }
-
-    @Override
-    public boolean hasDynamicLightEmission(BlockState state) {
-        return true;
-    }
-
-    @Override
-    public int getLightEmission(BlockState state, BlockGetter level, BlockPos pos) {
-        return state.getValue(LIGHT);
     }
 }

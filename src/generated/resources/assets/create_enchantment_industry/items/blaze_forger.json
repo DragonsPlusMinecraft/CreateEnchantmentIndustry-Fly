@@ -1,0 +1,7 @@
+{
+  "model": {
+    "type": "create_enchantment_industry:model/blaze_device",
+    "hat": "create_enchantment_industry:block/blaze/forger_hat",
+    "model": "create_enchantment_industry:item/blaze_forger"
+  }
+}

@@ -1,17 +1,14 @@
 {
-    "type": "create:crushing",
-    "ingredients": [
-        {
-            "item": "minecraft:infested_cobblestone"
-        }
-    ],
-    "results": [
-        {
-            "id": "minecraft:gravel"
-        },
-        {
-            "chance": 0.5,
-            "id": "create:experience_nugget"
-        }
-    ]
+  "type": "create:crushing",
+  "ingredient": "minecraft:infested_cobblestone",
+  "processing_time": 100,
+  "results": [
+    {
+      "id": "minecraft:gravel"
+    },
+    {
+      "chance": 0.5,
+      "id": "create:experience_nugget"
+    }
+  ]
 }

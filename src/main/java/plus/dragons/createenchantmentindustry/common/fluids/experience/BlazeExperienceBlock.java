@@ -18,19 +18,21 @@
 
 package plus.dragons.createenchantmentindustry.common.fluids.experience;
 
-import com.simibubi.create.AllItems;
+import com.zurrtum.create.AllItems;
+import net.fabricmc.fabric.api.entity.FakePlayer;
+import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext;
+import net.fabricmc.fabric.api.transfer.v1.transaction.base.SnapshotParticipant;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.InteractionResultHolder;
-import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
-import net.neoforged.neoforge.common.util.FakePlayer;
+import org.jetbrains.annotations.Nullable;
 import plus.dragons.createdragonsplus.common.processing.blaze.BlazeBlock;
 
 public abstract class BlazeExperienceBlock<T extends BlazeExperienceBlockEntity> extends BlazeBlock<T> {
@@ -39,41 +41,49 @@ public abstract class BlazeExperienceBlock<T extends BlazeExperienceBlockEntity>
     }
 
     @Override
-    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
+    protected InteractionResult useItemOn(
+            ItemStack stack,
+            BlockState state,
+            Level level,
+            BlockPos pos,
+            Player player,
+            InteractionHand hand,
+            BlockHitResult hitResult) {
         T blockEntity = getBlockEntity(level, pos);
         if (blockEntity == null)
-            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
-        boolean notConsume = player.hasInfiniteMaterials();
+            return InteractionResult.PASS;
+        boolean notConsume = player.getAbilities().instabuild;
         boolean forceOverflow = !(player instanceof FakePlayer);
         var resultHolder = applyFuel(state, level, pos, stack, forceOverflow, notConsume, false);
-        var result = resultHolder.getResult();
+        var result = resultHolder.result();
         if (result == InteractionResult.PASS)
-            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+            return InteractionResult.PASS;
         if (result == InteractionResult.FAIL)
-            return ItemInteractionResult.FAIL;
-        var remainder = resultHolder.getObject();
+            return InteractionResult.FAIL;
+        var remainder = resultHolder.remainder();
         if (!remainder.isEmpty()) {
             if (stack.isEmpty())
                 player.setItemInHand(hand, remainder);
             else
                 player.getInventory().placeItemBackInInventory(remainder);
         }
-        return ItemInteractionResult.sidedSuccess(level.isClientSide);
+        return level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER;
     }
 
-    public static InteractionResultHolder<ItemStack> applyFuel(BlockState state, Level level, BlockPos pos, ItemStack stack, boolean forceOverflow, boolean notConsume, boolean simulate) {
+    public static FuelApplication applyFuel(BlockState state, Level level, BlockPos pos, ItemStack stack, boolean forceOverflow, boolean notConsume, boolean simulate) {
         if (!state.hasBlockEntity())
-            return InteractionResultHolder.fail(ItemStack.EMPTY);
+            return FuelApplication.fail();
 
         BlockEntity be = level.getBlockEntity(pos);
         if (!(be instanceof BlazeExperienceBlockEntity blaze))
-            return InteractionResultHolder.fail(ItemStack.EMPTY);
+            return FuelApplication.fail();
 
         if (stack.is(AllItems.CREATIVE_BLAZE_CAKE)) {
-            blaze.applyCreativeFuel();
+            if (!simulate)
+                blaze.applyCreativeFuel();
             if (!notConsume)
                 stack.shrink(1);
-            return InteractionResultHolder.success(ItemStack.EMPTY);
+            return FuelApplication.success(ItemStack.EMPTY);
         }
         var fuel = ExperienceFuel.get(level, stack);
         if (fuel != null) {
@@ -83,11 +93,69 @@ public abstract class BlazeExperienceBlock<T extends BlazeExperienceBlockEntity>
                     stack.shrink(1);
                 ItemStack remainder = notConsume
                         ? ItemStack.EMPTY
-                        : fuel.usingConvertTo().orElse(stack.getCraftingRemainingItem()).copy();
-                return InteractionResultHolder.success(remainder);
+                        : fuel.usingConvertTo().orElseGet(stack.getItem()::getCraftingRemainder).copy();
+                return FuelApplication.success(remainder);
             }
-            return InteractionResultHolder.fail(ItemStack.EMPTY);
+            return FuelApplication.fail();
         }
-        return InteractionResultHolder.pass(ItemStack.EMPTY);
+        return FuelApplication.pass();
+    }
+
+    /**
+     * Tries to insert one fuel item from a mechanical arm without leaking side effects out of the arm transaction.
+     * A {@code null} return means that the stack is not fuel and may be offered to the machine inventory instead.
+     */
+    public static @Nullable ItemStack applyFuel(
+            BlockState state,
+            Level level,
+            BlockPos pos,
+            ItemStack stack,
+            TransactionContext transaction) {
+        ItemStack simulatedInput = stack.copy();
+        FuelApplication simulated = applyFuel(
+                state, level, pos, simulatedInput, false, false, true);
+        if (simulated.result() == InteractionResult.PASS)
+            return null;
+        if (!simulated.result().consumesAction())
+            return stack;
+
+        ItemStack fuel = stack.copy();
+        boolean dropContainerOnCommit = !simulatedInput.isEmpty();
+        new SnapshotParticipant<Boolean>() {
+            @Override
+            protected Boolean createSnapshot() {
+                return Boolean.FALSE;
+            }
+
+            @Override
+            protected void readSnapshot(Boolean snapshot) {}
+
+            @Override
+            protected void onFinalCommit() {
+                FuelApplication applied = applyFuel(
+                        level.getBlockState(pos), level, pos, fuel, false, false, false);
+                if (dropContainerOnCommit && applied.result().consumesAction()) {
+                    ItemStack container = applied.remainder();
+                    if (!container.isEmpty())
+                        Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), container);
+                }
+            }
+        }.updateSnapshots(transaction);
+
+        return simulatedInput.isEmpty() ? simulated.remainder() : simulatedInput;
+    }
+
+    public record FuelApplication(InteractionResult result, ItemStack remainder) {
+        static FuelApplication success(ItemStack remainder) {
+            return new FuelApplication(InteractionResult.SUCCESS, remainder);
+        }
+
+        static FuelApplication fail() {
+            return new FuelApplication(InteractionResult.FAIL, ItemStack.EMPTY);
+        }
+
+        static FuelApplication pass() {
+            return new FuelApplication(InteractionResult.PASS, ItemStack.EMPTY);
+        }
     }
 }

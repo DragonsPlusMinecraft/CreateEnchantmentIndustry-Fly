@@ -3,7 +3,8 @@
   "render_type": "solid",
   "texture_size": [32, 32],
   "textures": {
-    "hat": "create_enchantment_industry:block/enchanter_hat_small"
+    "hat": "create_enchantment_industry:block/enchanter_hat_small",
+    "particle": "#hat"
   },
   "elements": [
     {

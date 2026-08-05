@@ -18,7 +18,6 @@
 
 package plus.dragons.createenchantmentindustry.common.registry;
 
-import com.simibubi.create.foundation.damageTypes.DamageTypeBuilder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.worldgen.BootstrapContext;
 import net.minecraft.resources.ResourceKey;
@@ -34,6 +33,6 @@ public class CEIDamageTypes {
     }
 
     public static void bootstrap(BootstrapContext<DamageType> ctx) {
-        new DamageTypeBuilder(GRIND).scaling(DamageScaling.ALWAYS).register(ctx);
+        ctx.register(GRIND, new DamageType("create_enchantment_industry.grind", DamageScaling.ALWAYS, 0.0F));
     }
 }

@@ -19,9 +19,8 @@
 package plus.dragons.createenchantmentindustry.common.fluids.printer.behaviour;
 
 import com.mojang.serialization.DataResult;
-import com.simibubi.create.foundation.blockEntity.behaviour.fluid.SmartFluidTankBehaviour;
-import com.simibubi.create.foundation.utility.CreateLang;
-import java.util.ArrayList;
+import com.zurrtum.create.foundation.blockEntity.behaviour.fluid.SmartFluidTankBehaviour;
+import com.zurrtum.create.infrastructure.fluids.FluidStack;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.ChatFormatting;
@@ -34,12 +33,12 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BannerPattern;
 import net.minecraft.world.level.block.entity.BannerPatternLayers;
-import net.neoforged.neoforge.fluids.FluidStack;
 import plus.dragons.createenchantmentindustry.common.CEICommon;
 import plus.dragons.createenchantmentindustry.common.fluids.printer.PrinterBlockEntity;
 import plus.dragons.createenchantmentindustry.common.registry.CEIDataMaps;
 import plus.dragons.createenchantmentindustry.config.CEIConfig;
 import plus.dragons.createenchantmentindustry.util.CEIDyeFluids;
+import plus.dragons.createenchantmentindustry.util.CEIFluidUnits;
 import plus.dragons.createenchantmentindustry.util.CEILang;
 
 public class BannerPatternPrintingBehavior implements PrintingBehaviour {
@@ -54,21 +53,22 @@ public class BannerPatternPrintingBehavior implements PrintingBehaviour {
     public static Optional<DataResult<PrintingBehaviour>> create(Level level, SmartFluidTankBehaviour tank, ItemStack stack) {
         if (!stack.is(ItemTags.BANNERS))
             return Optional.empty();
-        BannerPatternLayers layers = stack.get(DataComponents.BANNER_PATTERNS);
-        if (layers.layers().isEmpty())
+        BannerPatternLayers patterns = stack.getOrDefault(DataComponents.BANNER_PATTERNS, BannerPatternLayers.EMPTY);
+        if (patterns.layers().isEmpty())
             return Optional.of(DataResult.error(() -> CEICommon.asLocalization("gui.printer.banner_pattern.no_pattern")));
-        if (layers.layers().size() > 1)
+        if (patterns.layers().size() > 1)
             return Optional.of(DataResult.error(() -> CEICommon.asLocalization("gui.printer.banner_pattern.multiple_pattern")));
-        return Optional.of(DataResult.success(new BannerPatternPrintingBehavior(tank, layers.layers().getFirst().pattern())));
+        Holder<BannerPattern> pattern = patterns.layers().getFirst().pattern();
+        return Optional.of(DataResult.success(new BannerPatternPrintingBehavior(tank, pattern)));
     }
 
     @Override
     public int getRequiredItemCount(Level level, ItemStack stack) {
         if (stack.is(ItemTags.BANNERS)) {
-            BannerPatternLayers layers = stack.get(DataComponents.BANNER_PATTERNS);
-            if (layers.layers().isEmpty())
+            BannerPatternLayers patterns = stack.getOrDefault(DataComponents.BANNER_PATTERNS, BannerPatternLayers.EMPTY);
+            if (patterns.layers().isEmpty())
                 return 1;
-            if (layers.layers().getLast().pattern().value().assetId().equals(pattern.value().assetId()))
+            if (patterns.layers().getLast().pattern().equals(pattern))
                 return 0;
             return 1;
         }
@@ -79,8 +79,8 @@ public class BannerPatternPrintingBehavior implements PrintingBehaviour {
     public int getRequiredFluidAmount(Level level, ItemStack stack, FluidStack fluidStack) {
         if (CEIDyeFluids.color(fluidStack).isEmpty())
             return 0;
-        var cost = fluidStack.getFluidHolder().getData(CEIDataMaps.PRINTING_BANNER_PATTERN_INGREDIENT);
-        return cost == null ? 0 : cost;
+        var cost = CEIDataMaps.PRINTING_BANNER_PATTERN_INGREDIENT.get(fluidStack.getFluid());
+        return cost == null ? 0 : Math.toIntExact(CEIFluidUnits.millibuckets(cost));
     }
 
     @Override
@@ -88,12 +88,11 @@ public class BannerPatternPrintingBehavior implements PrintingBehaviour {
         var color = CEIDyeFluids.color(fluidStack);
         if (color.isEmpty())
             return stack;
-        BannerPatternLayers layers = stack.get(DataComponents.BANNER_PATTERNS);
-        ArrayList<BannerPatternLayers.Layer> l = new ArrayList<>();
-        l.addAll(layers.layers());
-        l.add(new BannerPatternLayers.Layer(pattern, color.get()));
         var result = stack.copy();
-        result.set(DataComponents.BANNER_PATTERNS, new BannerPatternLayers(l));
+        BannerPatternLayers patterns = result.getOrDefault(DataComponents.BANNER_PATTERNS, BannerPatternLayers.EMPTY);
+        result.set(
+                DataComponents.BANNER_PATTERNS,
+                new BannerPatternLayers.Builder().addAll(patterns).add(pattern, color.get()).build());
         return result;
     }
 
@@ -112,14 +111,16 @@ public class BannerPatternPrintingBehavior implements PrintingBehaviour {
     public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
         CEILang.translate("gui.goggles.printing.banner_pattern").forGoggles(tooltip);
         var fluid = tank.getPrimaryHandler().getFluid();
-        var amount = fluid.getFluidHolder().getData(CEIDataMaps.PRINTING_BANNER_PATTERN_INGREDIENT);
+        var amount = CEIDataMaps.PRINTING_BANNER_PATTERN_INGREDIENT.get(fluid.getFluid());
         var color = CEIDyeFluids.color(fluid);
         if (amount != null && color.isPresent()) {
-            var p = Component.literal("→ ").append(Component.translatable(pattern.value().translationKey() + "." + color.get().getName())).withStyle(ChatFormatting.GOLD);
+            var p = Component.literal("→ ")
+                    .append(new BannerPatternLayers.Layer(pattern, color.get()).description())
+                    .withStyle(ChatFormatting.GOLD);
             CEILang.builder().add(p).forGoggles(tooltip, 1);
             CEILang.translate("gui.goggles.printing.cost",
                     CEILang.number(amount)
-                            .add(CreateLang.translate("generic.unit.millibuckets"))
+                            .add(CEILang.translateCreate("generic.unit.millibuckets"))
                             .style(amount <= CEIConfig.fluids().printerFluidCapacity.get()
                                     ? ChatFormatting.GREEN
                                     : ChatFormatting.RED))

@@ -1,14 +1,12 @@
 {
-    "type": "create_enchantment_industry:grinding",
-    "ingredients": [
-        {
-            "item": "create:experience_block"
-        }
-    ],
-    "results": [
-        {
-            "amount": 27,
-            "id": "create_enchantment_industry:experience"
-        }
-    ]
+  "type": "create_enchantment_industry:grinding",
+  "fluid_results": [
+    {
+      "amount": 2187,
+      "id": "create_enchantment_industry:experience"
+    }
+  ],
+  "ingredients": [
+    "create:experience_block"
+  ]
 }

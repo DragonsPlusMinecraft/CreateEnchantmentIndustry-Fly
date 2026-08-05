@@ -18,84 +18,31 @@
 
 package plus.dragons.createenchantmentindustry.common.processing.forger;
 
-import com.simibubi.create.foundation.blockEntity.behaviour.BehaviourType;
-import com.simibubi.create.foundation.blockEntity.behaviour.ValueBoxTransform;
-import com.simibubi.create.foundation.blockEntity.behaviour.ValueSettingsBoard;
-import com.simibubi.create.foundation.blockEntity.behaviour.ValueSettingsFormatter;
-import com.simibubi.create.foundation.blockEntity.behaviour.scrollValue.ScrollValueBehaviour;
-import java.util.Arrays;
-import net.minecraft.core.HolderLookup.Provider;
-import net.minecraft.nbt.CompoundTag;
+import com.zurrtum.create.foundation.blockEntity.behaviour.scrollValue.ServerScrollValueBehaviour;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.phys.BlockHitResult;
-import plus.dragons.createenchantmentindustry.util.CEILang;
+import net.minecraft.world.level.storage.ValueInput;
 
-public class BlazeForgerModeBehaviour extends ScrollValueBehaviour {
-    public static final BehaviourType<BlazeForgerModeBehaviour> TYPE = new BehaviourType<>("blaze_forger_mode");
-    public static final String MODE = "BlazeForgerMode";
-
+/** Server-safe forging mode state. Its value box and formatting live in the client source set. */
+public class BlazeForgerModeBehaviour extends ServerScrollValueBehaviour {
     private final BlazeForgerBlockEntity forger;
 
-    public BlazeForgerModeBehaviour(BlazeForgerBlockEntity forger, ValueBoxTransform transform) {
-        super(CEILang.translate("gui.blaze_forger.mode_selector").component(), forger, transform);
+    public BlazeForgerModeBehaviour(BlazeForgerBlockEntity forger) {
+        super(forger);
         this.forger = forger;
-        this.between(0, BlazeForgerMode.values().length - 1);
+        between(0, BlazeForgerMode.values().length - 1);
     }
 
     @Override
-    public BehaviourType<?> getType() {
-        return TYPE;
-    }
-
-    @Override
-    public boolean isSafeNBT() {
-        return false;
-    }
-
-    @Override
-    public void write(CompoundTag nbt, Provider registries, boolean clientPacket) {
-        nbt.putInt(MODE, getValue());
-    }
-
-    @Override
-    public void read(CompoundTag nbt, Provider registries, boolean clientPacket) {
-        if (nbt.contains(MODE))
-            forger.mode = BlazeForgerMode.BY_ID.apply(nbt.getInt(MODE));
-    }
-
-    @Override
-    public ValueSettingsBoard createBoard(Player player, BlockHitResult hitResult) {
-        return new ValueSettingsBoard(
-                label,
-                0,
-                BlazeForgerMode.values().length,
-                Arrays.stream(BlazeForgerMode.values())
-                        .map(BlazeForgerModeBehaviour::modeName)
-                        .map(Component.class::cast)
-                        .toList(),
-                new ValueSettingsFormatter(valueSettings -> modeName(BlazeForgerMode.BY_ID.apply(valueSettings.row()))));
-    }
-
-    @Override
-    public void setValueSettings(Player player, ValueSettings valueSetting, boolean ctrlDown) {
-        if (valueSetting.equals(getValueSettings()))
-            return;
-        setValue(valueSetting.row());
-        playFeedbackSound(this);
-    }
-
-    @Override
-    public ValueSettings getValueSettings() {
-        return new ValueSettings(getValue(), 0);
+    public void read(ValueInput input, boolean clientPacket) {
+        super.read(input, clientPacket);
+        forger.mode = BlazeForgerMode.BY_ID.apply(value);
     }
 
     @Override
     public void setValue(int value) {
-        value = Mth.clamp(value, 0, BlazeForgerMode.values().length - 1);
-        forger.setMode(BlazeForgerMode.BY_ID.apply(value));
+        forger.setMode(BlazeForgerMode.BY_ID.apply(Mth.clamp(value, 0, BlazeForgerMode.values().length - 1)));
     }
 
     @Override
@@ -103,12 +50,7 @@ public class BlazeForgerModeBehaviour extends ScrollValueBehaviour {
         return forger.getMode().ordinal();
     }
 
-    @Override
-    public String formatValue() {
-        return modeName(forger.getMode()).getString();
-    }
-
-    private static MutableComponent modeName(BlazeForgerMode mode) {
+    public static MutableComponent modeName(BlazeForgerMode mode) {
         return Component.translatable("create_enchantment_industry.gui.blaze_forger.mode." + mode.getSerializedName());
     }
 }

@@ -18,72 +18,63 @@
 
 package plus.dragons.createenchantmentindustry.common;
 
-import com.simibubi.create.foundation.item.ItemDescription;
-import com.simibubi.create.foundation.item.KineticStats;
-import com.simibubi.create.foundation.item.TooltipModifier;
-import net.createmod.catnip.lang.FontHelper;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
-import net.neoforged.bus.api.EventPriority;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.server.ServerStartedEvent;
-import net.neoforged.neoforge.registries.RegisterEvent;
-import plus.dragons.createdragonsplus.common.CDPRegistrate;
+import com.mojang.logging.LogUtils;
+import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.minecraft.resources.Identifier;
+import org.slf4j.Logger;
 import plus.dragons.createenchantmentindustry.common.fluids.printer.behaviour.CEIPrintingBehaviours;
+import plus.dragons.createenchantmentindustry.common.fluids.printer.behaviour.PrintingBehaviourRegistry;
 import plus.dragons.createenchantmentindustry.common.processing.EnchantmentProcessingRules;
-import plus.dragons.createenchantmentindustry.common.registry.*;
 import plus.dragons.createenchantmentindustry.common.registry.CEIAdvancements;
+import plus.dragons.createenchantmentindustry.common.registry.CEIArmInterationPoints;
+import plus.dragons.createenchantmentindustry.common.registry.CEIBlockEntities;
+import plus.dragons.createenchantmentindustry.common.registry.CEIBlocks;
+import plus.dragons.createenchantmentindustry.common.registry.CEICreativeModeTabs;
+import plus.dragons.createenchantmentindustry.common.registry.CEIDataMaps;
+import plus.dragons.createenchantmentindustry.common.registry.CEIEnchantments;
+import plus.dragons.createenchantmentindustry.common.registry.CEIFluids;
+import plus.dragons.createenchantmentindustry.common.registry.CEIItemAttributes;
+import plus.dragons.createenchantmentindustry.common.registry.CEIItems;
+import plus.dragons.createenchantmentindustry.common.registry.CEIMountedStorageTypes;
+import plus.dragons.createenchantmentindustry.common.registry.CEIRecipes;
+import plus.dragons.createenchantmentindustry.common.registry.CEIStats;
 import plus.dragons.createenchantmentindustry.config.CEIConfig;
 
-@Mod(CEICommon.ID)
-public class CEICommon {
+/** Common, dedicated-server-safe Fabric entrypoint. */
+public final class CEICommon implements ModInitializer {
     public static final String ID = "create_enchantment_industry";
-    public static final CDPRegistrate REGISTRATE = new CDPRegistrate(ID)
-            .setTooltipModifier(item -> new ItemDescription.Modifier(item, FontHelper.Palette.STANDARD_CREATE)
-                    .andThen(TooltipModifier.mapNull(KineticStats.create(item))));
+    public static final Logger LOGGER = LogUtils.getLogger();
 
-    public CEICommon(IEventBus modBus, ModContainer modContainer) {
-        REGISTRATE.registerEventListeners(modBus);
-        CEIFluids.register(modBus);
-        CEIBlocks.register(modBus);
-        CEIBlockEntities.register(modBus);
-        CEIItems.register(modBus);
-        CEICreativeModeTabs.register(modBus);
-        CEIRecipes.register(modBus);
-        CEIEnchantments.register(modBus);
-        CEIArmInterationPoints.register(modBus);
-        CEIDataMaps.register(modBus);
-        CEIStats.register(modBus);
-        CEIMountedStorageTypes.register(modBus);
-        CEIItemAttributes.register(modBus);
-        CEIPrintingBehaviours.register(modBus);
-        modBus.register(this);
-        modBus.register(new CEIConfig(modContainer));
-        NeoForge.EVENT_BUS.addListener(CEICommon::serverStarted);
+    @Override
+    public void onInitialize() {
+        // Blocks and fluids were registered earlier through CEICreatePlugin. Calling these is an idempotent assertion
+        // and ensures stress defaults exist before the config builders freeze.
+        CEIFluids.register();
+        CEIBlocks.register();
+
+        CEIItems.register();
+        CEIBlockEntities.register();
+        CEIRecipes.register();
+        CEIEnchantments.register();
+        CEIArmInterationPoints.register();
+        CEIMountedStorageTypes.register();
+        CEIStats.register();
+        CEIItemAttributes.register();
+        CEICreativeModeTabs.register();
+
+        CEIConfig.register();
+        CEIPrintingBehaviours.register();
+        CEIDataMaps.register();
+        CEIFluids.initialize();
+        CEIBlockEntities.registerStorageProviders();
+        CEIAdvancements.register();
+        ServerLifecycleEvents.SERVER_STARTING.register(server -> PrintingBehaviourRegistry.freeze());
+        ServerLifecycleEvents.SERVER_STARTED.register(EnchantmentProcessingRules::warnLegacyDataMaps);
     }
 
-    @SubscribeEvent
-    public void setup(final FMLCommonSetupEvent event) {}
-
-    public static void serverStarted(final ServerStartedEvent event) {
-        EnchantmentProcessingRules.warnLegacyDataMaps(event.getServer());
-    }
-
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    public void register(final RegisterEvent event) {
-        if (event.getRegistry() == BuiltInRegistries.TRIGGER_TYPES) {
-            CEIAdvancements.register();
-            CEIAdvancements.BuiltinTriggersQuickDeploy.register();
-        }
-    }
-
-    public static ResourceLocation asResource(String name) {
-        return ResourceLocation.fromNamespaceAndPath(ID, name);
+    public static Identifier asResource(String path) {
+        return Identifier.fromNamespaceAndPath(ID, path);
     }
 
     public static String asLocalization(String key) {

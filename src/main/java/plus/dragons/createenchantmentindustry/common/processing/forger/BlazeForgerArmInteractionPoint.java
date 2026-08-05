@@ -18,13 +18,11 @@
 
 package plus.dragons.createenchantmentindustry.common.processing.forger;
 
-import com.simibubi.create.content.kinetics.mechanicalArm.ArmBlockEntity;
-import com.simibubi.create.content.kinetics.mechanicalArm.ArmInteractionPoint;
-import com.simibubi.create.content.kinetics.mechanicalArm.ArmInteractionPointType;
+import com.zurrtum.create.content.kinetics.mechanicalArm.ArmBlockEntity;
+import com.zurrtum.create.content.kinetics.mechanicalArm.ArmInteractionPoint;
+import com.zurrtum.create.content.kinetics.mechanicalArm.ArmInteractionPointType;
+import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.Containers;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -39,38 +37,31 @@ public class BlazeForgerArmInteractionPoint extends ArmInteractionPoint {
 
     @Override
     public ItemStack insert(ArmBlockEntity armBlockEntity, ItemStack stack, boolean simulate) {
-        if (!(level.getBlockEntity(pos) instanceof BlazeForgerBlockEntity forger))
-            return stack;
-        ItemStack input = stack.copy();
-        InteractionResultHolder<ItemStack> result = BlazeExperienceBlock.applyFuel(cachedState, level, pos, input, false, false, simulate);
-        if (result.getResult().consumesAction()) {
-            ItemStack remainder = result.getObject();
-            if (input.isEmpty()) {
-                return remainder;
-            } else {
-                if (!simulate)
-                    Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), remainder);
-                return input;
-            }
-        } else if (result.getResult() == InteractionResult.PASS) {
-            return forger.insertAutomationItem(input, simulate);
+        try (Transaction transaction = Transaction.openOuter()) {
+            if (!(level.getBlockEntity(pos) instanceof BlazeForgerBlockEntity forger))
+                return stack;
+            ItemStack input = stack.copy();
+            ItemStack fuelRemainder = BlazeExperienceBlock.applyFuel(cachedState, level, pos, input, transaction);
+            ItemStack remainder = fuelRemainder != null
+                    ? fuelRemainder
+                    : forger.insertAutomationItem(input, transaction);
+            if (!simulate)
+                transaction.commit();
+            return remainder;
         }
-        return input;
     }
 
     @Override
     public ItemStack extract(ArmBlockEntity armBlockEntity, int slot, int amount, boolean simulate) {
-        if (level.getBlockEntity(pos) instanceof BlazeForgerBlockEntity forger) {
-            return forger.extractAutomationItem(slot, amount, simulate);
+        try (Transaction transaction = Transaction.openOuter()) {
+            if (level.getBlockEntity(pos) instanceof BlazeForgerBlockEntity forger) {
+                ItemStack extracted = forger.extractAutomationItem(amount, transaction);
+                if (!simulate)
+                    transaction.commit();
+                return extracted;
+            }
+            return ItemStack.EMPTY;
         }
-        return ItemStack.EMPTY;
-    }
-
-    @Override
-    public int getSlotCount(ArmBlockEntity armBlockEntity) {
-        if (level.getBlockEntity(pos) instanceof BlazeForgerBlockEntity forger)
-            return forger.getAutomationSlotCount();
-        return 0;
     }
 
     public static class Type extends ArmInteractionPointType {

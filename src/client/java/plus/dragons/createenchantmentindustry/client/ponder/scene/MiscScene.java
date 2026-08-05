@@ -1,0 +1,321 @@
+/*
+ * Copyright (C) 2025  DragonsPlus
+ * SPDX-License-Identifier: LGPL-3.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+package plus.dragons.createenchantmentindustry.client.ponder.scene;
+
+import com.zurrtum.create.catnip.math.Pointing;
+import com.zurrtum.create.client.foundation.ponder.CreateSceneBuilder;
+import com.zurrtum.create.client.ponder.api.element.ElementLink;
+import com.zurrtum.create.client.ponder.api.element.WorldSectionElement;
+import com.zurrtum.create.client.ponder.api.scene.SceneBuilder;
+import com.zurrtum.create.client.ponder.api.scene.SceneBuildingUtil;
+import com.zurrtum.create.content.fluids.tank.FluidTankBlockEntity;
+import com.zurrtum.create.content.kinetics.belt.transport.TransportedItemStack;
+import com.zurrtum.create.content.logistics.box.PackageStyles;
+import com.zurrtum.create.content.logistics.depot.DepotBlockEntity;
+import com.zurrtum.create.content.processing.basin.BasinBlockEntity;
+import java.util.List;
+import net.minecraft.core.Direction;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.network.Filterable;
+import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.WrittenBookContent;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.phys.Vec3;
+import plus.dragons.createdragonsplus.registry.CDPItems;
+import plus.dragons.createenchantmentindustry.client.ponder.CEIPonderScenes;
+import plus.dragons.createenchantmentindustry.common.fluids.printer.PrinterBehaviour;
+import plus.dragons.createenchantmentindustry.common.fluids.printer.PrinterBlockEntity;
+import plus.dragons.createenchantmentindustry.common.registry.CEIFluids;
+import plus.dragons.createenchantmentindustry.util.CEIDyeFluids;
+import plus.dragons.createenchantmentindustry.util.CEITransfer;
+
+public class MiscScene {
+    public static void experienceHatch(SceneBuilder builder, SceneBuildingUtil util) {
+        CreateSceneBuilder scene = new CreateSceneBuilder(builder);
+        scene.title("experience_hatch.intro", "Introduction to Experience Hatch");
+        scene.configureBasePlate(0, 0, 4);
+        scene.showBasePlate();
+        scene.idle(10);
+        scene.world().showSection(util.select().fromTo(3, 1, 1, 1, 1, 3)
+                .add(util.select().fromTo(3, 2, 2, 2, 3, 3))
+                .add(util.select().position(1, 3, 2)), Direction.DOWN);
+        scene.idle(10);
+
+        scene.overlay().showText(50)
+                .text("The Experience Hatch is simple to use. Right click it to store Experience...")
+                .placeNearTarget()
+                .pointAt(util.vector().centerOf(1, 3, 2));
+        var frontVec = util.vector().blockSurface(util.grid().at(2, 3, 2), Direction.WEST)
+                .add(-.125, 0, 0);
+        scene.overlay().showControls(frontVec, Pointing.UP, 50).rightClick();
+        scene.idle(10);
+        scene.world().modifyBlockEntity(util.grid().at(2, 3, 2), FluidTankBlockEntity.class, be -> {
+            var ctrl = be.getControllerBE();
+            if (ctrl != null)
+                CEITransfer.insertMillibuckets(ctrl.getTankInventory(), CEIFluids.EXPERIENCE.getSource(), 10000, false);
+        });
+        scene.idle(50);
+
+        scene.world().modifyBlockEntity(util.grid().at(3, 2, 1), BasinBlockEntity.class,
+                be -> CEITransfer.insertMillibuckets(
+                        be.inputTank.getPrimaryHandler(), CEIFluids.EXPERIENCE.getSource(), 1000, false));
+        scene.idle(10);
+        scene.world().showSection(util.select().fromTo(3, 2, 1, 2, 2, 1), Direction.UP);
+        scene.idle(10);
+        scene.overlay().showText(60)
+                .text("...Shift-Right-Click Hatch to extract stored Experience")
+                .placeNearTarget()
+                .pointAt(util.vector().centerOf(2, 2, 1));
+        frontVec = util.vector().blockSurface(util.grid().at(3, 2, 1), Direction.WEST)
+                .add(-.125, 0, 0);
+        scene.overlay().showControls(frontVec, Pointing.UP, 50).rightClick().whileSneaking();
+        scene.idle(30);
+        scene.world().modifyBlockEntity(util.grid().at(3, 2, 1), BasinBlockEntity.class,
+                be -> CEITransfer.extractMillibuckets(
+                        be.inputTank.getPrimaryHandler(), CEIFluids.EXPERIENCE.getSource(), 1000, false));
+        scene.idle(40);
+
+        scene.overlay().showText(80)
+                .text("There are a filter slot and a scroll panel on Hatch. You can configure how much Experience is retrieved or deposited per interaction on the panel")
+                .attachKeyFrame()
+                .placeNearTarget()
+                .pointAt(util.vector().centerOf(1, 3, 2));
+        for (int i = 0; i < 12; i++) {
+            scene.world().modifyBlockEntity(util.grid().at(2, 3, 2), FluidTankBlockEntity.class, be -> {
+                var ctrl = be.getControllerBE();
+                if (ctrl != null)
+                    CEITransfer.insertMillibuckets(ctrl.getTankInventory(), CEIFluids.EXPERIENCE.getSource(), 1000, false);
+            });
+            scene.idle(5);
+        }
+        scene.idle(30);
+
+        scene.overlay().showText(40)
+                .text("The filter slot is used to deal with experience fluids of other mods")
+                .attachKeyFrame()
+                .placeNearTarget()
+                .pointAt(util.vector().centerOf(1, 3, 2));
+        scene.idle(30);
+        scene.world().showSection(util.select().position(0, 1, 1), Direction.DOWN);
+        scene.idle(20);
+
+        scene.world().modifyBlockEntity(util.grid().at(1, 1, 1), FluidTankBlockEntity.class, be -> {
+            var ctrl = be.getControllerBE();
+            if (ctrl != null)
+                CEITransfer.insertMillibuckets(ctrl.getTankInventory(), CEIDyeFluids.get(DyeColor.CYAN), 36000, false);
+        });
+        scene.idle(10);
+        scene.overlay().showText(40)
+                .text("For example, assume that Liquid Cyan Dye is experience fluid from another mod")
+                .placeNearTarget()
+                .pointAt(util.vector().centerOf(0, 1, 1));
+        scene.idle(50);
+        scene.overlay().showText(40)
+                .text("Place Bucket of Cyan Dye in the filter slot")
+                .placeNearTarget()
+                .pointAt(util.vector().centerOf(0, 1, 1));
+        scene.overlay().showControls(util.vector().centerOf(0, 1, 1), Pointing.DOWN, 40).withItem(CEIDyeFluids.bucket(DyeColor.CYAN));
+        scene.idle(50);
+
+        scene.overlay().showText(60)
+                .text("You can now directly insert and extract Cyan Dye as \"Cyan Experience\"")
+                .placeNearTarget()
+                .pointAt(util.vector().centerOf(0, 1, 1));
+        for (int i = 0; i < 12; i++) {
+            scene.world().modifyBlockEntity(util.grid().at(1, 1, 1), FluidTankBlockEntity.class, be -> {
+                var ctrl = be.getControllerBE();
+                if (ctrl != null)
+                    CEITransfer.extractMillibuckets(ctrl.getTankInventory(), CEIDyeFluids.get(DyeColor.CYAN), 3000, false);
+            });
+            scene.idle(10);
+        }
+    }
+
+    public static void printer(SceneBuilder builder, SceneBuildingUtil util) {
+        CreateSceneBuilder scene = new CreateSceneBuilder(builder);
+        scene.title("printer.intro", "Introduction to Printer");
+        scene.configureBasePlate(1, 1, 3);
+        scene.idle(10);
+        scene.world().showSection(util.select().fromTo(1, 0, 1, 3, 0, 3)
+                .add(util.select().position(2, 1, 2))
+                .add(util.select().position(2, 3, 2)), Direction.DOWN);
+        scene.idle(10);
+
+        scene.overlay().showText(40)
+                .text("This is a Printer")
+                .placeNearTarget()
+                .pointAt(util.vector().centerOf(2, 3, 2));
+        scene.idle(50);
+
+        var slotVec = util.vector().of(2, 3.5, 2.5);
+        scene.overlay().showFilterSlotInput(slotVec, Direction.WEST, 80);
+        scene.overlay().showText(80)
+                .text("Before use, set the item to print via the filter slot...")
+                .placeNearTarget()
+                .attachKeyFrame()
+                .pointAt(util.vector().blockSurface(util.grid().at(2, 3, 2), Direction.WEST));
+        var writtenBook = Items.WRITTEN_BOOK.getDefaultInstance();
+        writtenBook.set(
+                DataComponents.WRITTEN_BOOK_CONTENT,
+                new WrittenBookContent(
+                        Filterable.passThrough("1"),
+                        "1",
+                        1,
+                        List.of(Filterable.passThrough(Component.literal("1"))),
+                        true));
+        scene.world().modifyBlockEntity(util.grid().at(2, 3, 2), PrinterBlockEntity.class, be -> {
+            var printer = be.getBehaviour(PrinterBehaviour.TYPE);
+            printer.setFilter(writtenBook);
+        });
+        scene.idle(90);
+
+        scene.overlay().showText(80)
+                .text("...and pass in the corresponding fluid")
+                .placeNearTarget()
+                .attachKeyFrame()
+                .pointAt(util.vector().centerOf(2, 3, 2));
+        scene.idle(10);
+        scene.world().showSection(util.select().column(4, 2)
+                .add(util.select().position(4, 0, 2))
+                .add(util.select().position(3, 3, 2)), Direction.WEST);
+        scene.idle(20);
+        scene.world().setKineticSpeed(util.select().position(3, 3, 2), 128f);
+        scene.idle(20);
+        scene.world().modifyBlockEntity(util.grid().at(2, 3, 2), PrinterBlockEntity.class,
+                be -> CEITransfer.insertMillibuckets(
+                        be.getFluidStorage(null), CEIDyeFluids.get(DyeColor.BLACK), 3000, false));
+        scene.idle(40);
+
+        scene.overlay().showText(80)
+                .text("Copying written book")
+                .attachKeyFrame()
+                .independent();
+        scene.idle(10);
+        scene.world().modifyBlockEntity(util.grid().at(2, 1, 2), DepotBlockEntity.class,
+                be -> be.setHeldItem(new TransportedItemStack(new ItemStack(Items.BOOK))));
+        scene.world().modifyBlockEntity(util.grid().at(2, 3, 2), PrinterBlockEntity.class,
+                be -> be.processingTicks = 50);
+        scene.idle(45);
+        scene.world().modifyBlockEntity(util.grid().at(2, 1, 2), DepotBlockEntity.class,
+                be -> be.setHeldItem(new TransportedItemStack(Items.WRITTEN_BOOK.getDefaultInstance())));
+        scene.idle(50);
+
+        scene.overlay().showText(80)
+                .text("Changing package pattern")
+                .attachKeyFrame()
+                .independent();
+        scene.world().modifyBlockEntity(util.grid().at(2, 3, 2), PrinterBlockEntity.class, be -> {
+            var printer = be.getBehaviour(PrinterBehaviour.TYPE);
+            var packageItem = new ItemStack(CDPItems.RARE_MARBLE_GATE_PACKAGE.get());
+            printer.setFilter(packageItem);
+        });
+        scene.idle(10);
+        scene.world().modifyBlockEntity(util.grid().at(2, 1, 2), DepotBlockEntity.class,
+                be -> be.setHeldItem(new TransportedItemStack(new ItemStack(PackageStyles.ALL_BOXES.get(1)))));
+        scene.world().modifyBlockEntity(util.grid().at(2, 3, 2), PrinterBlockEntity.class,
+                be -> be.processingTicks = 50);
+        scene.idle(45);
+        scene.world().modifyBlockEntity(util.grid().at(2, 1, 2), DepotBlockEntity.class,
+                be -> be.setHeldItem(
+                        new TransportedItemStack(new ItemStack(CDPItems.RARE_MARBLE_GATE_PACKAGE.get()))));
+        scene.idle(50);
+
+        scene.overlay().showText(80)
+                .text("Duplicating Enchanted Book")
+                .attachKeyFrame()
+                .independent();
+        var enchantedBook = Items.ENCHANTED_BOOK.getDefaultInstance();
+        CEIPonderScenes.enchant(scene, enchantedBook, Enchantments.CHANNELING, 1);
+        scene.world().modifyBlockEntity(util.grid().at(2, 3, 2), PrinterBlockEntity.class, be -> {
+            var printer = be.getBehaviour(PrinterBehaviour.TYPE);
+            printer.setFilter(enchantedBook);
+        });
+        scene.world().modifyBlockEntity(util.grid().at(2, 3, 2), PrinterBlockEntity.class, be -> {
+            var storage = be.getFluidStorage(null);
+            CEITransfer.extractMillibuckets(storage, CEIDyeFluids.get(DyeColor.BLACK), 3000, false);
+            CEITransfer.insertMillibuckets(storage, CEIFluids.EXPERIENCE.getSource(), 3000, false);
+        });
+        scene.idle(10);
+        scene.world().modifyBlockEntity(util.grid().at(2, 1, 2), DepotBlockEntity.class,
+                be -> be.setHeldItem(new TransportedItemStack(new ItemStack(Items.BOOK))));
+        scene.world().modifyBlockEntity(util.grid().at(2, 3, 2), PrinterBlockEntity.class,
+                be -> be.processingTicks = 50);
+        scene.idle(45);
+        scene.world().modifyBlockEntity(util.grid().at(2, 1, 2), DepotBlockEntity.class,
+                be -> be.setHeldItem(new TransportedItemStack(Items.ENCHANTED_BOOK.getDefaultInstance())));
+        scene.idle(50);
+
+        scene.overlay().showText(80)
+                .text("It can also name items, copy train schedule, copy clipboard, change package address and more. Use JEI to look up printing recipe")
+                .attachKeyFrame()
+                .independent();
+        scene.idle(80);
+    }
+
+    public static void experienceLantern(SceneBuilder builder, SceneBuildingUtil util) {
+        CreateSceneBuilder scene = new CreateSceneBuilder(builder);
+        scene.title("experience_lantern.intro", "Introduction to Experience Lantern");
+        scene.configureBasePlate(0, 0, 5);
+        scene.showBasePlate();
+        var lantern = scene.world().showIndependentSection(util.select().position(2, 6, 2), Direction.DOWN);
+        scene.world().moveSection(lantern, new Vec3(0, -5, 0), 0);
+        scene.idle(10);
+
+        scene.overlay().showText(100)
+                .text("Experience Lantern absorbs experience from nearby players and experience orb. It glows according to the amount of experience stored internally")
+                .placeNearTarget()
+                .pointAt(util.vector().centerOf(2, 1, 2));
+        scene.idle(100);
+        scene.world().hideIndependentSection(lantern, Direction.UP);
+        scene.idle(10);
+
+        var contraptionSelection = util.select().fromTo(0, 1, 0, 4, 3, 4);
+        scene.world().showSection(util.select().fromTo(2, 4, 2, 2, 5, 2), Direction.DOWN);
+        ElementLink<WorldSectionElement> contraption = scene.world().showIndependentSection(contraptionSelection, Direction.DOWN);
+        scene.idle(10);
+
+        scene.world().configureCenterOfRotation(contraption, util.vector().centerOf(2, 4, 2));
+        scene.overlay().showText(60)
+                .attachKeyFrame()
+                .pointAt(util.vector().centerOf(util.grid().at(2, 2, 0)))
+                .text("Experience Lantern also works on Contraption");
+        scene.idle(70);
+
+        scene.world().setKineticSpeed(util.select().fromTo(2, 4, 2, 2, 5, 2), -24);
+        scene.world().rotateBearing(util.grid().at(2, 4, 2), -360, 140);
+        scene.world().rotateSection(contraption, 0, -360, 0, 140);
+        scene.idle(30);
+        scene.world().modifyBlockEntity(util.grid().at(2, 1, 3), FluidTankBlockEntity.class, be -> {
+            var ctrl = be.getControllerBE();
+            if (ctrl != null)
+                CEITransfer.insertMillibuckets(ctrl.getTankInventory(), CEIFluids.EXPERIENCE.getSource(), 2000, false);
+        });
+        scene.idle(40);
+        scene.world().modifyBlockEntity(util.grid().at(2, 1, 3), FluidTankBlockEntity.class, be -> {
+            var ctrl = be.getControllerBE();
+            if (ctrl != null)
+                CEITransfer.insertMillibuckets(ctrl.getTankInventory(), CEIFluids.EXPERIENCE.getSource(), 2000, false);
+        });
+        scene.idle(70);
+        scene.world().setKineticSpeed(util.select().fromTo(2, 4, 2, 2, 5, 2), 0);
+    }
+}

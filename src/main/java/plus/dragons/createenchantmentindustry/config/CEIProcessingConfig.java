@@ -18,7 +18,7 @@
 
 package plus.dragons.createenchantmentindustry.config;
 
-import net.createmod.catnip.config.ConfigBase;
+import com.zurrtum.create.catnip.config.ConfigBase;
 
 public class CEIProcessingConfig extends ConfigBase {
     public final ConfigFloat regularLightningStrikeTransformXpBlockChance = f(1, 0, 1,

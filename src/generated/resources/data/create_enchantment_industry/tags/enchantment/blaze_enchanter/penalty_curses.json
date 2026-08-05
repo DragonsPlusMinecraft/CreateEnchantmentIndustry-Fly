@@ -1,9 +1,9 @@
 {
-    "values": [
-        "#minecraft:in_enchanting_table",
-        "#minecraft:tradeable",
-        "#minecraft:on_mob_spawn_equipment",
-        "#minecraft:on_traded_equipment",
-        "#minecraft:on_random_loot"
-    ]
+  "values": [
+    "#minecraft:in_enchanting_table",
+    "#minecraft:tradeable",
+    "#minecraft:on_mob_spawn_equipment",
+    "#minecraft:on_traded_equipment",
+    "#minecraft:on_random_loot"
+  ]
 }

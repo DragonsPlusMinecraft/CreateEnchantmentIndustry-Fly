@@ -18,36 +18,43 @@
 
 package plus.dragons.createenchantmentindustry.util;
 
-import java.util.function.UnaryOperator;
-import net.minecraft.resources.ResourceLocation;
-import org.jetbrains.annotations.NotNull;
-import plus.dragons.createdragonsplus.common.advancements.CDPAdvancement;
+import java.util.function.BiConsumer;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
 import plus.dragons.createdragonsplus.common.advancements.criterion.BuiltinTrigger;
 import plus.dragons.createenchantmentindustry.common.CEICommon;
-import plus.dragons.createenchantmentindustry.common.registry.CEIAdvancements;
 
-public class CEIAdvancement extends CDPAdvancement {
-    public CEIAdvancement(String id, UnaryOperator<Builder> b) {
-        super(id, b);
+/** Runtime criterion handle and language metadata for a generated CEI advancement. */
+public final class CEIAdvancement {
+    private final Identifier id;
+    private final String title;
+    private final String description;
+    private final BuiltinTrigger builtinTrigger = new BuiltinTrigger();
+
+    public CEIAdvancement(String path, String title, String description) {
+        this.id = CEICommon.asResource(path);
+        this.title = title;
+        this.description = description;
     }
 
-    @Override
-    protected @NotNull BuiltinTrigger add(@NotNull ResourceLocation id) {
-        return CEIAdvancements.BuiltinTriggersQuickDeploy.add(id);
+    public Identifier id() {
+        return id;
     }
 
-    @Override
-    protected void addToAdvancementEntries() {
-        CEIAdvancements.ENTRIES.add(this);
+    public BuiltinTrigger builtinTrigger() {
+        return builtinTrigger;
     }
 
-    @Override
-    protected @NotNull ResourceLocation getBackground() {
-        return CEICommon.asResource("textures/block/super_experience_block.png");
+    public void awardTo(Player player) {
+        if (player instanceof ServerPlayer serverPlayer) {
+            builtinTrigger.trigger(serverPlayer);
+        }
     }
 
-    @Override
-    protected @NotNull String namespace() {
-        return CEICommon.ID;
+    public void provideLang(BiConsumer<String, String> consumer) {
+        String key = "advancement." + id.getNamespace() + "." + id.getPath();
+        consumer.accept(key, title);
+        consumer.accept(key + ".desc", description);
     }
 }

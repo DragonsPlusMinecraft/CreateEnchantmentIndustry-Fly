@@ -18,17 +18,36 @@
 
 package plus.dragons.createenchantmentindustry.common.registry;
 
-import static plus.dragons.createenchantmentindustry.common.CEICommon.REGISTRATE;
-
-import com.simibubi.create.api.contraption.storage.fluid.MountedFluidStorageType;
-import com.tterrag.registrate.util.entry.RegistryEntry;
-import net.neoforged.bus.api.IEventBus;
+import com.zurrtum.create.api.contraption.storage.fluid.MountedFluidStorageType;
+import com.zurrtum.create.api.registry.CreateRegistries;
+import com.zurrtum.create.api.registry.CreateRegistryKeys;
+import net.minecraft.core.Registry;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import plus.dragons.createenchantmentindustry.common.CEICommon;
 import plus.dragons.createenchantmentindustry.common.fluids.lantern.ExperienceLanternMountedFluidStorageType;
 
-public class CEIMountedStorageTypes {
-    public static final RegistryEntry<MountedFluidStorageType<?>, ExperienceLanternMountedFluidStorageType> EXPERIENCE_LANTERN = REGISTRATE
-            .mountedFluidStorage("experience_lantern", ExperienceLanternMountedFluidStorageType::new)
-            .register();
+public final class CEIMountedStorageTypes {
+    public static final CEIRegistryEntry<ExperienceLanternMountedFluidStorageType> EXPERIENCE_LANTERN = registerType(
+            "experience_lantern", new ExperienceLanternMountedFluidStorageType());
 
-    public static void register(IEventBus modBus) {}
+    private static boolean blockAttached;
+
+    private CEIMountedStorageTypes() {}
+
+    public static synchronized void register() {
+        if (blockAttached) {
+            return;
+        }
+        blockAttached = true;
+        MountedFluidStorageType.REGISTRY.register(CEIBlocks.EXPERIENCE_LANTERN.get(), EXPERIENCE_LANTERN.get());
+    }
+
+    private static <T extends MountedFluidStorageType<?>> CEIRegistryEntry<T> registerType(String path, T type) {
+        Identifier id = CEICommon.asResource(path);
+        ResourceKey<MountedFluidStorageType<?>> key = ResourceKey.create(
+                CreateRegistryKeys.MOUNTED_FLUID_STORAGE_TYPE, id);
+        Registry.register(CreateRegistries.MOUNTED_FLUID_STORAGE_TYPE, key, type);
+        return new CEIRegistryEntry<>(id, type);
+    }
 }

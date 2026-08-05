@@ -18,8 +18,7 @@
 
 package plus.dragons.createenchantmentindustry.config;
 
-import net.createmod.catnip.config.ConfigBase;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import com.zurrtum.create.catnip.config.ConfigBase;
 
 public class CEIServerConfig extends ConfigBase {
     public final CEIKineticsConfig kinetics = nested(0, CEIKineticsConfig::new, Comments.kinetics);
@@ -28,13 +27,13 @@ public class CEIServerConfig extends ConfigBase {
     public final CEIProcessingConfig processing = nested(0, CEIProcessingConfig::new, Comments.processing);
 
     @Override
-    public void registerAll(ModConfigSpec.Builder builder) {
-        super.registerAll(builder);
-    }
-
-    @Override
     public String getName() {
         return "server";
+    }
+
+    /** Create Fly's ConfigBase keeps its group cursor between registrations. */
+    void prepareReload() {
+        depth = 0;
     }
 
     static class Comments {

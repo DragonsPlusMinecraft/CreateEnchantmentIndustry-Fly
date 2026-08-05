@@ -18,31 +18,66 @@
 
 package plus.dragons.createenchantmentindustry.common.registry;
 
-import com.simibubi.create.content.processing.recipe.StandardProcessingRecipe;
 import java.util.function.Supplier;
+import net.fabricmc.fabric.api.recipe.v1.sync.RecipeSynchronization;
+import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredRegister;
-import plus.dragons.createdragonsplus.common.recipe.RecipeTypeInfo;
+import plus.dragons.createdragonsplus.api.recipe.CDPRecipeTypeInfo;
 import plus.dragons.createenchantmentindustry.common.CEICommon;
 import plus.dragons.createenchantmentindustry.common.fluids.printer.PrintingRecipe;
 import plus.dragons.createenchantmentindustry.common.kinetics.grindstone.GrindingRecipe;
 
-public class CEIRecipes {
-    private static final DeferredRegister<RecipeType<?>> TYPES = DeferredRegister.create(BuiltInRegistries.RECIPE_TYPE, CEICommon.ID);
-    private static final DeferredRegister<RecipeSerializer<?>> SERIALIZERS = DeferredRegister.create(BuiltInRegistries.RECIPE_SERIALIZER, CEICommon.ID);
-    public static final RecipeTypeInfo<PrintingRecipe> PRINTING = register("printing", () -> new PrintingRecipe.Serializer<>(PrintingRecipe::new));
-    public static final RecipeTypeInfo<GrindingRecipe> GRINDING = register("grinding", () -> new StandardProcessingRecipe.Serializer<>(GrindingRecipe::new));
+/** Recipe type/serializer pairs registered without Registrate. */
+public final class CEIRecipes {
+    private static RecipeType<PrintingRecipe> printingType;
+    private static RecipeSerializer<PrintingRecipe> printingSerializer;
+    private static RecipeType<GrindingRecipe> grindingType;
+    private static RecipeSerializer<GrindingRecipe> grindingSerializer;
 
-    public static void register(IEventBus modBus) {
-        TYPES.register(modBus);
-        SERIALIZERS.register(modBus);
+    public static final CDPRecipeTypeInfo<PrintingRecipe> PRINTING = info(
+            "printing", () -> printingType, () -> printingSerializer);
+    public static final CDPRecipeTypeInfo<GrindingRecipe> GRINDING = info(
+            "grinding", () -> grindingType, () -> grindingSerializer);
+
+    private static boolean registered;
+
+    private CEIRecipes() {}
+
+    public static synchronized void register() {
+        if (registered) {
+            return;
+        }
+        registered = true;
+        printingType = registerType(PRINTING.getId());
+        grindingType = registerType(GRINDING.getId());
+        printingSerializer = registerSerializer(PRINTING.getId(), new PrintingRecipe.Serializer());
+        grindingSerializer = registerSerializer(GRINDING.getId(), new GrindingRecipe.Serializer());
+        RecipeSynchronization.synchronizeRecipeSerializer(printingSerializer);
+        RecipeSynchronization.synchronizeRecipeSerializer(grindingSerializer);
     }
 
-    private static <R extends Recipe<?>> RecipeTypeInfo<R> register(String name, Supplier<? extends RecipeSerializer<R>> serializer) {
-        return new RecipeTypeInfo<>(name, serializer, SERIALIZERS, TYPES);
+    private static <R extends Recipe<?>> CDPRecipeTypeInfo<R> info(
+            String path,
+            Supplier<? extends RecipeType<R>> type,
+            Supplier<? extends RecipeSerializer<R>> serializer) {
+        return new CDPRecipeTypeInfo<>(CEICommon.asResource(path), type, serializer);
+    }
+
+    private static <R extends Recipe<?>> RecipeType<R> registerType(Identifier id) {
+        return Registry.register(BuiltInRegistries.RECIPE_TYPE, id, new RecipeType<R>() {
+            @Override
+            public String toString() {
+                return id.toString();
+            }
+        });
+    }
+
+    private static <R extends Recipe<?>> RecipeSerializer<R> registerSerializer(
+            Identifier id, RecipeSerializer<R> serializer) {
+        return Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, id, serializer);
     }
 }

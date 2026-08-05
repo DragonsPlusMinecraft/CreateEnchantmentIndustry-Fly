@@ -18,153 +18,242 @@
 
 package plus.dragons.createenchantmentindustry.common.fluids.printer;
 
+import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
-import com.simibubi.create.compat.jei.category.sequencedAssembly.SequencedAssemblySubCategory;
-import com.simibubi.create.content.processing.recipe.ProcessingRecipe;
-import com.simibubi.create.content.processing.recipe.ProcessingRecipeBuilder;
-import com.simibubi.create.content.processing.sequenced.IAssemblyRecipe;
-import java.util.Arrays;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import com.zurrtum.create.content.processing.recipe.ProcessingOutput;
+import com.zurrtum.create.foundation.fluid.FluidIngredient;
+import com.zurrtum.create.foundation.recipe.CreateRollableRecipe;
+import com.zurrtum.create.infrastructure.fluids.FluidStack;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Supplier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.util.valueproviders.ConstantFloat;
-import net.minecraft.util.valueproviders.UniformFloat;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeSerializer;
-import net.minecraft.world.item.enchantment.effects.PlaySoundEffect;
+import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient;
+import plus.dragons.createdragonsplus.common.recipe.BaseRecipeBuilder;
 import plus.dragons.createenchantmentindustry.common.registry.CEIBlocks;
 import plus.dragons.createenchantmentindustry.common.registry.CEIRecipes;
-import plus.dragons.createenchantmentindustry.integration.jei.category.assembly.AssemblyPrintingCategory;
 import plus.dragons.createenchantmentindustry.util.CEILang;
 
-public class PrintingRecipe extends ProcessingRecipe<PrintingInput, PrintingRecipeParams> implements IAssemblyRecipe {
-    public PrintingRecipe(PrintingRecipeParams params) {
-        super(CEIRecipes.PRINTING, params);
-    }
-
-    public static Builder builder(ResourceLocation id, PlaySoundEffect sound) {
-        return new Builder(id, sound);
-    }
-
-    public static Builder builder(ResourceLocation id) {
-        return new Builder(id, new PlaySoundEffect(
-                BuiltInRegistries.SOUND_EVENT.wrapAsHolder(SoundEvents.ENCHANTMENT_TABLE_USE),
-                ConstantFloat.of(1),
-                UniformFloat.of(.9f, 1f)));
-    }
-
-    public void playSound(Level level, BlockPos pos, SoundSource source) {
-        var sound = this.params.sound;
-        level.playSound(null,
-                pos,
-                sound.soundEvent().value(),
-                source,
-                sound.volume().sample(level.random),
-                sound.pitch().sample(level.random));
-    }
-
-    @Override
-    protected int getMaxInputCount() {
-        return 2;
-    }
-
-    @Override
-    protected int getMaxFluidInputCount() {
-        return 1;
-    }
-
-    @Override
-    protected int getMaxOutputCount() {
-        return 1;
+/** Two-item and one-fluid printer recipe with fully codec-backed sound settings. */
+public record PrintingRecipe(
+        List<Ingredient> ingredients,
+        List<FluidIngredient> fluidIngredients,
+        List<ProcessingOutput> results,
+        SoundEvent sound,
+        float volume,
+        float minimumPitch,
+        float maximumPitch)
+        implements CreateRollableRecipe<PrintingInput> {
+    public PrintingRecipe {
+        ingredients = List.copyOf(ingredients);
+        fluidIngredients = List.copyOf(fluidIngredients);
+        results = List.copyOf(results);
+        if (ingredients.size() != 2)
+            throw new IllegalArgumentException("Printing recipes require exactly two item ingredients");
+        if (fluidIngredients.size() != 1)
+            throw new IllegalArgumentException("Printing recipes require exactly one fluid ingredient");
+        if (results.size() != 1)
+            throw new IllegalArgumentException("Printing recipes require exactly one item result");
+        if (volume < 0 || minimumPitch < 0 || maximumPitch < minimumPitch)
+            throw new IllegalArgumentException("Invalid printing sound range");
     }
 
     @Override
     public boolean matches(PrintingInput input, Level level) {
-        return ingredients.get(0).test(input.base()) &&
-                ingredients.get(1).test(input.template()) &&
-                (input.fluid().isEmpty() || fluidIngredients.getFirst().test(input.fluid()));
+        return ingredients.getFirst().test(input.base())
+                && ingredients.get(1).test(input.template())
+                && (input.fluid().isEmpty() || fluidIngredients.getFirst().test(input.fluid()));
     }
 
     @Override
+    public List<ItemStack> assemble(PrintingInput input, RandomSource random) {
+        List<ItemStack> output = new ArrayList<>(1);
+        ProcessingOutput.rollOutput(random, results, output::add);
+        return output;
+    }
+
+    @Override
+    public RecipeSerializer<PrintingRecipe> getSerializer() {
+        return CEIRecipes.PRINTING.getSerializer();
+    }
+
+    @Override
+    public RecipeType<PrintingRecipe> getType() {
+        return CEIRecipes.PRINTING.getType();
+    }
+
+    public List<Ingredient> getIngredients() {
+        return ingredients;
+    }
+
+    public List<FluidIngredient> getFluidIngredients() {
+        return fluidIngredients;
+    }
+
+    public List<ProcessingOutput> getRollableResults() {
+        return results;
+    }
+
+    public void playSound(Level level, BlockPos pos, SoundSource source) {
+        float pitch = minimumPitch + level.random.nextFloat() * (maximumPitch - minimumPitch);
+        level.playSound(null, pos, sound, source, volume, pitch);
+    }
+
     public Component getDescriptionForAssembly() {
-        ItemStack[] matchingStacks = ingredients.get(1).getItems();
-        List<FluidStack> matchingFluidStacks = Arrays.asList(fluidIngredients.getFirst().getFluids());
-        if (matchingStacks.length == 0 || matchingFluidStacks.isEmpty()) {
+        ItemStack[] matchingStacks = ingredients.get(1).items()
+                .map(ItemStack::new)
+                .toArray(ItemStack[]::new);
+        List<FluidStack> matchingFluids = fluidIngredients.getFirst().getMatchingFluidStacks();
+        if (matchingStacks.length == 0 || matchingFluids.isEmpty())
             return Component.literal("Invalid");
-        }
-        return CEILang.translate("recipe.assembly.printing",
+        return CEILang.translate(
+                "recipe.assembly.printing",
                 matchingStacks[0].getHoverName(),
-                matchingFluidStacks.getFirst().getHoverName()).component();
+                matchingFluids.getFirst().getName()).component();
     }
 
-    @Override
     public void addRequiredMachines(Set<ItemLike> required) {
-        required.add(CEIBlocks.PRINTER);
+        required.add(CEIBlocks.PRINTER.get());
     }
 
-    @Override
     public void addAssemblyIngredients(List<Ingredient> list) {
-        list.add(getIngredients().get(1));
+        list.add(ingredients.get(1));
     }
 
-    @Override
-    public void addAssemblyFluidIngredients(List<SizedFluidIngredient> list) {
-        list.add(getFluidIngredients().getFirst());
+    public void addAssemblyFluidIngredients(List<FluidIngredient> list) {
+        list.add(fluidIngredients.getFirst());
     }
 
-    @Override
-    public Supplier<Supplier<SequencedAssemblySubCategory>> getJEISubCategory() {
-        return () -> AssemblyPrintingCategory::new;
+    public static Builder builder(Identifier id) {
+        return new Builder(id, SoundEvents.ENCHANTMENT_TABLE_USE);
     }
 
-    public static class Builder extends ProcessingRecipeBuilder<PrintingRecipeParams, PrintingRecipe, Builder> {
-        protected Builder(ResourceLocation id, PlaySoundEffect sound) {
-            super(PrintingRecipe::new, id);
-            PrintingRecipeParams params = (PrintingRecipeParams) this.params;
-            params.sound = sound;
+    public static Builder builder(Identifier id, SoundEvent sound) {
+        return new Builder(id, sound);
+    }
+
+    public static final class Builder extends BaseRecipeBuilder<PrintingRecipe, Builder> {
+        private final List<Ingredient> ingredients = new ArrayList<>();
+        private final List<FluidIngredient> fluidIngredients = new ArrayList<>();
+        private final List<ProcessingOutput> results = new ArrayList<>();
+        private SoundEvent sound;
+        private float volume = 1;
+        private float minimumPitch = .9F;
+        private float maximumPitch = 1.1F;
+
+        private Builder(Identifier id, SoundEvent sound) {
+            super("printing");
+            this.id = id;
+            this.sound = sound;
         }
 
         @Override
-        protected PrintingRecipeParams createParams() {
-            return new PrintingRecipeParams();
-        }
-
-        @Override
-        public Builder self() {
+        protected Builder builder() {
             return this;
         }
+
+        public Builder require(Ingredient ingredient) {
+            ingredients.add(ingredient);
+            return this;
+        }
+
+        public Builder require(FluidIngredient ingredient) {
+            fluidIngredients.add(ingredient);
+            return this;
+        }
+
+        public Builder output(ItemStack stack) {
+            results.add(new ProcessingOutput(stack));
+            return this;
+        }
+
+        public Builder sound(SoundEvent sound, float volume, float minimumPitch, float maximumPitch) {
+            this.sound = sound;
+            this.volume = volume;
+            this.minimumPitch = minimumPitch;
+            this.maximumPitch = maximumPitch;
+            return this;
+        }
+
+        @Override
+        public RecipeHolder<PrintingRecipe> build() {
+            if (id == null)
+                throw new IllegalStateException("Printing recipe id is required");
+            PrintingRecipe recipe = new PrintingRecipe(
+                    ingredients, fluidIngredients, results, sound, volume, minimumPitch, maximumPitch);
+            return new RecipeHolder<>(ResourceKey.create(Registries.RECIPE, id), recipe);
+        }
     }
 
-    public static class Serializer<R extends PrintingRecipe> implements RecipeSerializer<R> {
-        private final MapCodec<R> codec;
-        private final StreamCodec<RegistryFriendlyByteBuf, R> streamCodec;
+    public static final class Serializer implements RecipeSerializer<PrintingRecipe> {
+        private static final StreamCodec<RegistryFriendlyByteBuf, List<Ingredient>> INGREDIENTS_STREAM_CODEC = Ingredient.CONTENTS_STREAM_CODEC.apply(ByteBufCodecs.list());
+        private static final StreamCodec<RegistryFriendlyByteBuf, List<FluidIngredient>> FLUIDS_STREAM_CODEC = FluidIngredient.PACKET_CODEC.apply(ByteBufCodecs.list());
+        private static final StreamCodec<RegistryFriendlyByteBuf, List<ProcessingOutput>> RESULTS_STREAM_CODEC = ProcessingOutput.STREAM_CODEC.apply(ByteBufCodecs.list());
+        private static final StreamCodec<RegistryFriendlyByteBuf, SoundEvent> SOUND_STREAM_CODEC = ByteBufCodecs.registry(Registries.SOUND_EVENT);
 
-        public Serializer(ProcessingRecipe.Factory<PrintingRecipeParams, R> factory) {
-            this.codec = ProcessingRecipe.codec(factory, PrintingRecipeParams.CODEC);
-            this.streamCodec = ProcessingRecipe.streamCodec(factory, PrintingRecipeParams.STREAM_CODEC);
+        public static final MapCodec<PrintingRecipe> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+                Ingredient.CODEC.listOf(2, 2).fieldOf("ingredients").forGetter(PrintingRecipe::ingredients),
+                FluidIngredient.CODEC.listOf(1, 1).fieldOf("fluid_ingredients").forGetter(PrintingRecipe::fluidIngredients),
+                ProcessingOutput.CODEC.listOf(1, 1).fieldOf("results").forGetter(PrintingRecipe::results),
+                BuiltInRegistries.SOUND_EVENT.byNameCodec().optionalFieldOf("sound", SoundEvents.ENCHANTMENT_TABLE_USE)
+                        .forGetter(PrintingRecipe::sound),
+                Codec.FLOAT.optionalFieldOf("volume", 1F).forGetter(PrintingRecipe::volume),
+                Codec.FLOAT.optionalFieldOf("minimum_pitch", .9F).forGetter(PrintingRecipe::minimumPitch),
+                Codec.FLOAT.optionalFieldOf("maximum_pitch", 1.1F).forGetter(PrintingRecipe::maximumPitch))
+                .apply(instance, PrintingRecipe::new));
+
+        public static final StreamCodec<RegistryFriendlyByteBuf, PrintingRecipe> STREAM_CODEC = new StreamCodec<>() {
+            @Override
+            public PrintingRecipe decode(RegistryFriendlyByteBuf buffer) {
+                return new PrintingRecipe(
+                        INGREDIENTS_STREAM_CODEC.decode(buffer),
+                        FLUIDS_STREAM_CODEC.decode(buffer),
+                        RESULTS_STREAM_CODEC.decode(buffer),
+                        SOUND_STREAM_CODEC.decode(buffer),
+                        ByteBufCodecs.FLOAT.decode(buffer),
+                        ByteBufCodecs.FLOAT.decode(buffer),
+                        ByteBufCodecs.FLOAT.decode(buffer));
+            }
+
+            @Override
+            public void encode(RegistryFriendlyByteBuf buffer, PrintingRecipe recipe) {
+                INGREDIENTS_STREAM_CODEC.encode(buffer, recipe.ingredients());
+                FLUIDS_STREAM_CODEC.encode(buffer, recipe.fluidIngredients());
+                RESULTS_STREAM_CODEC.encode(buffer, recipe.results());
+                SOUND_STREAM_CODEC.encode(buffer, recipe.sound());
+                ByteBufCodecs.FLOAT.encode(buffer, recipe.volume());
+                ByteBufCodecs.FLOAT.encode(buffer, recipe.minimumPitch());
+                ByteBufCodecs.FLOAT.encode(buffer, recipe.maximumPitch());
+            }
+        };
+
+        @Override
+        public MapCodec<PrintingRecipe> codec() {
+            return CODEC;
         }
 
         @Override
-        public MapCodec<R> codec() {
-            return codec;
-        }
-
-        @Override
-        public StreamCodec<RegistryFriendlyByteBuf, R> streamCodec() {
-            return streamCodec;
+        public StreamCodec<RegistryFriendlyByteBuf, PrintingRecipe> streamCodec() {
+            return STREAM_CODEC;
         }
     }
 }

@@ -1,85 +1,94 @@
 {
-    "values": {
-        "cofh_core:experience": {
-            "neoforge:conditions": [
-                {
-                    "type": "neoforge:mod_loaded",
-                    "modid": "cofh_core"
-                }
-            ],
-            "neoforge:value": 25
-        },
-        "cyclic:xpjuice": {
-            "neoforge:conditions": [
-                {
-                    "type": "neoforge:mod_loaded",
-                    "modid": "cyclic"
-                }
-            ],
-            "neoforge:value": 20
-        },
-        "enderio:xpjuice": {
-            "neoforge:conditions": [
-                {
-                    "type": "neoforge:mod_loaded",
-                    "modid": "enderio"
-                }
-            ],
-            "neoforge:value": 20
-        },
-        "industrialforegoing:essence": {
-            "neoforge:conditions": [
-                {
-                    "type": "neoforge:mod_loaded",
-                    "modid": "industrialforegoing"
-                }
-            ],
-            "neoforge:value": 20
-        },
-        "justdirethings:xp_fluid_source": {
-            "neoforge:conditions": [
-                {
-                    "type": "neoforge:mod_loaded",
-                    "modid": "justdirethings"
-                }
-            ],
-            "neoforge:value": 20
-        },
-        "mob_grinding_utils:fluid_xp": {
-            "neoforge:conditions": [
-                {
-                    "type": "neoforge:mod_loaded",
-                    "modid": "mob_grinding_utils"
-                }
-            ],
-            "neoforge:value": 20
-        },
-        "pneumaticcraft:memory_essence": {
-            "neoforge:conditions": [
-                {
-                    "type": "neoforge:mod_loaded",
-                    "modid": "pneumaticcraft"
-                }
-            ],
-            "neoforge:value": 20
-        },
-        "reliquary:xp_juice_still": {
-            "neoforge:conditions": [
-                {
-                    "type": "neoforge:mod_loaded",
-                    "modid": "reliquary"
-                }
-            ],
-            "neoforge:value": 20
-        },
-        "sophisticatedcore:xp_still": {
-            "neoforge:conditions": [
-                {
-                    "type": "neoforge:mod_loaded",
-                    "modid": "sophisticatedcore"
-                }
-            ],
-            "neoforge:value": 20
-        }
+  "values": {
+    "cofh_core:experience": {
+      "fabric:load_conditions": {
+        "condition": "fabric:all_mods_loaded",
+        "values": [
+          "cofh_core"
+        ]
+      },
+      "replace": false,
+      "value": 25
+    },
+    "cyclic:xpjuice": {
+      "fabric:load_conditions": {
+        "condition": "fabric:all_mods_loaded",
+        "values": [
+          "cyclic"
+        ]
+      },
+      "replace": false,
+      "value": 20
+    },
+    "enderio:xpjuice": {
+      "fabric:load_conditions": {
+        "condition": "fabric:all_mods_loaded",
+        "values": [
+          "enderio"
+        ]
+      },
+      "replace": false,
+      "value": 20
+    },
+    "industrialforegoing:essence": {
+      "fabric:load_conditions": {
+        "condition": "fabric:all_mods_loaded",
+        "values": [
+          "industrialforegoing"
+        ]
+      },
+      "replace": false,
+      "value": 20
+    },
+    "justdirethings:xp_fluid_source": {
+      "fabric:load_conditions": {
+        "condition": "fabric:all_mods_loaded",
+        "values": [
+          "justdirethings"
+        ]
+      },
+      "replace": false,
+      "value": 20
+    },
+    "mob_grinding_utils:fluid_xp": {
+      "fabric:load_conditions": {
+        "condition": "fabric:all_mods_loaded",
+        "values": [
+          "mob_grinding_utils"
+        ]
+      },
+      "replace": false,
+      "value": 20
+    },
+    "pneumaticcraft:memory_essence": {
+      "fabric:load_conditions": {
+        "condition": "fabric:all_mods_loaded",
+        "values": [
+          "pneumaticcraft"
+        ]
+      },
+      "replace": false,
+      "value": 20
+    },
+    "reliquary:xp_juice_still": {
+      "fabric:load_conditions": {
+        "condition": "fabric:all_mods_loaded",
+        "values": [
+          "reliquary"
+        ]
+      },
+      "replace": false,
+      "value": 20
+    },
+    "sophisticatedcore:xp_still": {
+      "fabric:load_conditions": {
+        "condition": "fabric:all_mods_loaded",
+        "values": [
+          "sophisticatedcore"
+        ]
+      },
+      "replace": false,
+      "value": 20
     }
+  }
 }

@@ -18,71 +18,70 @@
 
 package plus.dragons.createenchantmentindustry.common.kinetics.deployer;
 
-import com.simibubi.create.AllItems;
-import com.simibubi.create.content.kinetics.deployer.DeployerFakePlayer;
+import com.zurrtum.create.AllItems;
+import com.zurrtum.create.content.kinetics.deployer.DeployerPlayer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.bus.api.EventPriority;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.entity.living.LivingExperienceDropEvent;
-import net.neoforged.neoforge.event.level.BlockDropsEvent;
 import plus.dragons.createenchantmentindustry.common.fluids.experience.ExperienceHelper;
 import plus.dragons.createenchantmentindustry.config.CEIConfig;
 
-@EventBusSubscriber
-public class DeployerExtension {
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void onLivingExperienceDrop(final LivingExperienceDropEvent event) {
-        if (!(event.getAttackingPlayer() instanceof DeployerFakePlayer deployer))
-            return;
-        if (!CEIConfig.kinetics().deployerKillDropXp.get())
-            return;
-        int experience = Mth.ceil(event.getDroppedExperience() * CEIConfig.kinetics().deployerKillXpScale.getF());
-        event.setDroppedExperience(experience);
-        if (CEIConfig.kinetics().deployerCollectXp.get()) {
+public final class DeployerExtension {
+    private static final ThreadLocal<DeployerPlayer> BLOCK_EXPERIENCE_CONTEXT = new ThreadLocal<>();
+
+    private DeployerExtension() {}
+
+    public static int handleKillExperience(DeployerPlayer deployer, int droppedExperience) {
+        int experience = Mth.ceil(droppedExperience * CEIConfig.kinetics().deployerKillXpScale.getF());
+        if (experience > 0 && CEIConfig.kinetics().deployerCollectXp.get()) {
             collectExperience(deployer, experience);
-            event.setCanceled(true);
+            return 0;
         }
+        return experience;
     }
 
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void onBlockDrops(final BlockDropsEvent event) {
-        if (!(event.getBreaker() instanceof DeployerFakePlayer deployer))
-            return;
+    public static int handleBlockExperience(DeployerPlayer deployer, int droppedExperience) {
         boolean dropXp = CEIConfig.kinetics().deployerMineDropXp.get();
         int experience = dropXp
-                ? Mth.ceil(event.getDroppedExperience() * CEIConfig.kinetics().deployerMineXpScale.getF())
+                ? Mth.ceil(droppedExperience * CEIConfig.kinetics().deployerMineXpScale.getF())
                 : 0;
         if (experience > 0 && CEIConfig.kinetics().deployerCollectXp.get()) {
             collectExperience(deployer, experience);
-            experience = 0;
+            return 0;
         }
-        if (experience > 0) {
-            event.getState().getBlock().popExperience(event.getLevel(), event.getPos(), experience);
-        }
-        event.getDrops().stream()
-                .map(ItemEntity::getItem)
-                .forEach(deployer.getInventory()::placeItemBackInInventory);
-        event.setCanceled(true);
+        return experience;
     }
 
-    public static void collectExperience(DeployerFakePlayer deployer, int experience) {
+    public static void beginBlockExperience(DeployerPlayer deployer) {
+        BLOCK_EXPERIENCE_CONTEXT.set(deployer);
+    }
+
+    public static void endBlockExperience() {
+        BLOCK_EXPERIENCE_CONTEXT.remove();
+    }
+
+    public static int handleCurrentBlockExperience(int droppedExperience) {
+        DeployerPlayer deployer = BLOCK_EXPERIENCE_CONTEXT.get();
+        return deployer == null ? droppedExperience : handleBlockExperience(deployer, droppedExperience);
+    }
+
+    public static void collectExperience(DeployerPlayer deployer, int experience) {
         if (experience <= 0)
             return;
+        var player = deployer.cast();
+        ServerLevel level = (ServerLevel) player.level();
         if (CEIConfig.kinetics().deployerMendItem.get()) {
-            ItemStack heldItem = deployer.getMainHandItem();
+            ItemStack heldItem = player.getMainHandItem();
             if (ExperienceHelper.canRepairItem(heldItem))
-                experience -= ExperienceHelper.repairItem(experience, deployer.serverLevel(), heldItem, false);
+                experience -= ExperienceHelper.repairItem(experience, level, heldItem, false);
         }
         if (experience <= 0)
             return;
         int nuggets = experience / 3;
-        if (deployer.serverLevel().random.nextFloat() < (experience % 3) / 3f)
+        if (level.random.nextFloat() < (experience % 3) / 3f)
             nuggets++;
         if (nuggets > 0) {
-            deployer.getInventory().placeItemBackInInventory(AllItems.EXP_NUGGET.asStack(nuggets));
+            player.getInventory().placeItemBackInInventory(new ItemStack(AllItems.EXP_NUGGET, nuggets));
         }
     }
 }

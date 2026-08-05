@@ -18,9 +18,8 @@
 
 package plus.dragons.createenchantmentindustry.common.fluids.experience;
 
-import com.simibubi.create.content.logistics.itemHatch.HatchFilterSlot;
-import com.simibubi.create.foundation.blockEntity.SmartBlockEntity;
-import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
+import com.zurrtum.create.api.behaviour.BlockEntityBehaviour;
+import com.zurrtum.create.foundation.blockEntity.SmartBlockEntity;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -34,7 +33,7 @@ public class ExperienceHatchBlockEntity extends SmartBlockEntity {
     }
 
     @Override
-    public void addBehaviours(List<BlockEntityBehaviour> behaviours) {
-        behaviours.add(behaviour = new ExperienceHatchBehaviour(this, new HatchFilterSlot()));
+    public void addBehaviours(List<BlockEntityBehaviour<?>> behaviours) {
+        behaviours.add(behaviour = new ExperienceHatchBehaviour(this));
     }
 }

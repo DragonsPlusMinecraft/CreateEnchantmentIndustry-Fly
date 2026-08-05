@@ -18,24 +18,39 @@
 
 package plus.dragons.createenchantmentindustry.mixin;
 
-import com.llamalad7.mixinextras.sugar.Local;
-import com.simibubi.create.content.kinetics.deployer.DeployerHandler;
-import java.util.ArrayList;
+import com.zurrtum.create.content.kinetics.deployer.DeployerHandler;
+import com.zurrtum.create.content.kinetics.deployer.DeployerPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.common.CommonHooks;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import plus.dragons.createenchantmentindustry.common.kinetics.deployer.DeployerExtension;
+import plus.dragons.createenchantmentindustry.config.CEIConfig;
 
-@Mixin(DeployerHandler.class)
+@Mixin(value = DeployerHandler.class, remap = false)
 public class DeployerHandlerMixin {
-    @Redirect(method = "tryHarvestBlock", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/state/BlockState;spawnAfterBreak(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/item/ItemStack;Z)V"))
-    private static void tryHarvestBlock$postBlockDropsEvent(BlockState state, ServerLevel level, BlockPos pos, ItemStack stack, boolean dropExperience, @Local(argsOnly = true) ServerPlayer player, @Local BlockEntity blockEntity) {
-        CommonHooks.handleBlockDrops(level, pos, state, blockEntity, new ArrayList<>(), player, stack);
+    @Redirect(method = "tryHarvestBlock", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/state/BlockState;spawnAfterBreak(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/item/ItemStack;Z)V", remap = true), remap = false)
+    private static void tryHarvestBlock$applyExperience(
+            BlockState state,
+            ServerLevel level,
+            BlockPos pos,
+            ItemStack stack,
+            boolean dropExperience,
+            DeployerPlayer deployer,
+            net.minecraft.server.level.ServerPlayerGameMode gameMode,
+            BlockPos harvestedPos) {
+        if (!CEIConfig.kinetics().deployerMineDropXp.get()) {
+            state.spawnAfterBreak(level, pos, stack, false);
+            return;
+        }
+        DeployerExtension.beginBlockExperience(deployer);
+        try {
+            state.spawnAfterBreak(level, pos, stack, dropExperience);
+        } finally {
+            DeployerExtension.endBlockExperience();
+        }
     }
 }

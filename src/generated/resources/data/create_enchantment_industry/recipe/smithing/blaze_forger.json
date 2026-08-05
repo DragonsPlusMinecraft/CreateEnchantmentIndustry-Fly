@@ -1,16 +1,9 @@
 {
-    "type": "minecraft:smithing_transform",
-    "addition": {
-        "item": "minecraft:anvil"
-    },
-    "base": {
-        "item": "create:blaze_burner"
-    },
-    "result": {
-        "count": 1,
-        "id": "create_enchantment_industry:blaze_forger"
-    },
-    "template": {
-        "item": "create_dragons_plus:blaze_upgrade_smithing_template"
-    }
+  "type": "minecraft:smithing_transform",
+  "addition": "minecraft:anvil",
+  "base": "create:blaze_burner",
+  "result": {
+    "id": "create_enchantment_industry:blaze_forger"
+  },
+  "template": "create_dragons_plus:blaze_upgrade_smithing_template"
 }
