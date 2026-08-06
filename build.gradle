@@ -2,6 +2,7 @@ plugins {
     id 'fabric-loom' version "${loom_version}"
     id 'java-library'
     id 'maven-publish'
+    id 'me.modmuss50.mod-publish-plugin' version '2.1.1'
     id 'com.diffplug.spotless' version '7.0.2'
     id 'idea'
 }
@@ -94,11 +95,6 @@ dependencies {
     modClientRuntimeOnly "maven.modrinth:jei:${jei_version}"
 
     compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
-
-    testImplementation platform("org.junit:junit-bom:${junit_version}")
-    testImplementation 'org.junit.jupiter:junit-jupiter'
-    testImplementation "net.fabricmc:fabric-loader-junit:${loader_version}"
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 processResources {
@@ -128,10 +124,6 @@ tasks.withType(JavaCompile).configureEach {
     options.release = 21
 }
 
-tasks.withType(Test).configureEach {
-    useJUnitPlatform()
-}
-
 tasks.withType(Jar).configureEach {
     from 'LICENSE.txt'
     exclude '.cache'
@@ -140,7 +132,7 @@ tasks.withType(Jar).configureEach {
 
 spotless {
     java {
-        target 'src/main/java/**/*.java', 'src/client/java/**/*.java', 'src/test/java/**/*.java'
+        target 'src/main/java/**/*.java', 'src/client/java/**/*.java'
         endWithNewline()
         leadingTabsToSpaces()
         removeUnusedImports()
@@ -161,6 +153,47 @@ publishing {
             artifactId = "${mod_artifact_id}-${minecraft_version}"
             from components.java
         }
+    }
+    repositories {
+        maven {
+            name = 'DragonsPlus'
+            url = 'https://maven.dragons.plus/releases'
+            credentials(PasswordCredentials)
+            authentication {
+                basic(BasicAuthentication)
+            }
+        }
+    }
+}
+
+publishMods {
+    file = remapJar.archiveFile
+    additionalFiles.from(remapSourcesJar.archiveFile)
+    changelog = providers.fileContents(layout.projectDirectory.file('CHANGELOG.md')).asText
+    version = mod_version
+    type = me.modmuss50.mpp.ReleaseType.of(mod_release_channel)
+    displayName = "${mod_name} ${mod_version} for Create Fly ${create_fly_version}"
+    modLoaders.add('fabric')
+    dryRun = providers.environmentVariable('MOD_PUBLISH_DRY_RUN').map { it.toBoolean() }.orElse(false)
+
+    curseforge {
+        projectId = '688768'
+        accessToken = providers.environmentVariable('CURSEFORGE_TOKEN')
+        minecraftVersions.add(minecraft_version)
+        javaVersions.add(JavaVersion.VERSION_21)
+        client = true
+        server = true
+        requires('fabric-api', 'create-fly', 'create-dragons-plus')
+        optional('jei')
+    }
+
+    modrinth {
+        projectId = 'JWGBpFUP'
+        accessToken = providers.environmentVariable('MODRINTH_TOKEN')
+        minecraftVersions.add(minecraft_version)
+        environment = CLIENT_AND_SERVER
+        requires('fabric-api', 'create-fly', 'create-dragons-plus')
+        optional('jei')
     }
 }
 
