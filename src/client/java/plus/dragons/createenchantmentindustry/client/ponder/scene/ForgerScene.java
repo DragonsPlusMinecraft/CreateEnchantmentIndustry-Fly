@@ -357,7 +357,7 @@ public class ForgerScene {
         scene.idle(20);
         scene.world().modifyBlockEntity(util.grid().at(2, 1, 2), BlazeForgerBlockEntity.class,
                 be -> be.insertItem(Items.DIAMOND_SWORD.getDefaultInstance(), false));
-        scene.world().instructArm(armPos, ArmBlockEntity.Phase.MOVE_TO_INPUT, ItemStack.EMPTY, -1);
+        scene.world().instructArm(armPos, ArmBlockEntity.Phase.SEARCH_INPUTS, ItemStack.EMPTY, -1);
         scene.idle(20);
         scene.world().instructArm(armPos, ArmBlockEntity.Phase.MOVE_TO_INPUT, ItemStack.EMPTY, 1);
         scene.idle(20);
@@ -369,7 +369,7 @@ public class ForgerScene {
         scene.idle(20);
         scene.world().modifyBlockEntity(util.grid().at(2, 1, 2), BlazeForgerBlockEntity.class,
                 be -> be.insertItem(template, false));
-        scene.world().instructArm(armPos, ArmBlockEntity.Phase.MOVE_TO_INPUT, ItemStack.EMPTY, -1);
+        scene.world().instructArm(armPos, ArmBlockEntity.Phase.SEARCH_INPUTS, ItemStack.EMPTY, -1);
         scene.idle(50);
 
         scene.overlay().showText(60)
@@ -389,7 +389,7 @@ public class ForgerScene {
         scene.world().modifyBlockEntity(util.grid().at(2, 1, 2), BlazeForgerBlockEntity.class,
                 be -> be.getSpecialTank().setFluid(CEIFluidUnits.stack(CEIFluids.EXPERIENCE.getSource(), 4000)));
         scene.world().modifyBlock(util.grid().at(2, 1, 2), bs -> bs.setValue(BlazeBlock.HEAT_LEVEL, BlazeBurnerBlock.HeatLevel.SEETHING), false);
-        scene.world().instructArm(armPos, ArmBlockEntity.Phase.MOVE_TO_INPUT, ItemStack.EMPTY, -1);
+        scene.world().instructArm(armPos, ArmBlockEntity.Phase.SEARCH_INPUTS, ItemStack.EMPTY, -1);
         scene.idle(20);
 
         var output = util.grid().at(0, 1, 1);
@@ -415,7 +415,7 @@ public class ForgerScene {
         scene.idle(20);
         scene.world().instructArm(armPos2, ArmBlockEntity.Phase.MOVE_TO_OUTPUT, enchanted, 0);
         scene.idle(20);
-        scene.world().instructArm(armPos2, ArmBlockEntity.Phase.MOVE_TO_INPUT, ItemStack.EMPTY, -1);
+        scene.world().instructArm(armPos2, ArmBlockEntity.Phase.SEARCH_INPUTS, ItemStack.EMPTY, -1);
         scene.world().modifyBlockEntity(
                 output, DepotBlockEntity.class, depot -> depot.setHeldItem(new TransportedItemStack(enchanted)));
         scene.idle(20);

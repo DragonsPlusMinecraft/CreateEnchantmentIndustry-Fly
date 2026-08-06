@@ -28,13 +28,12 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.BucketItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.level.block.Block;
 import plus.dragons.createenchantmentindustry.common.CEICommon;
-import plus.dragons.createenchantmentindustry.common.item.FoilBucketItem;
+import plus.dragons.createenchantmentindustry.common.item.ExperienceBucketItem;
 import plus.dragons.createenchantmentindustry.common.item.FoilItem;
 import plus.dragons.createenchantmentindustry.common.kinetics.grindstone.MechanicalGrindStoneItem;
 import plus.dragons.createenchantmentindustry.common.processing.BlazeCustomRenderedBlockItem;
@@ -77,9 +76,9 @@ public final class CEIItems {
             "experience_cake", FoilItem::new, new Item.Properties().rarity(Rarity.RARE));
     public static final CEIRegistryEntry<FoilItem> EXPERIENCE_CAKE_SLICE = register(
             "experience_cake_slice", FoilItem::new, new Item.Properties().rarity(Rarity.RARE));
-    public static final CEIRegistryEntry<BucketItem> EXPERIENCE_BUCKET = register(
+    public static final CEIRegistryEntry<ExperienceBucketItem> EXPERIENCE_BUCKET = register(
             "experience_bucket",
-            properties -> new FoilBucketItem(CEIFluids.EXPERIENCE.getSource(), properties),
+            properties -> new ExperienceBucketItem(CEIFluids.EXPERIENCE.getSource(), properties),
             new Item.Properties().craftRemainder(Items.BUCKET).stacksTo(1).rarity(Rarity.UNCOMMON));
 
     static {

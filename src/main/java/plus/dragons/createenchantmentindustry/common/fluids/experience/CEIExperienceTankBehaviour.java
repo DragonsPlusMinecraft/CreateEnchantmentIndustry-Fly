@@ -24,6 +24,7 @@ import com.zurrtum.create.foundation.blockEntity.behaviour.fluid.SmartFluidTankB
 import com.zurrtum.create.infrastructure.fluids.FluidStack;
 import java.util.Optional;
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.storage.ValueInput;
 import plus.dragons.createenchantmentindustry.common.registry.CEIFluids;
 
 /**
@@ -32,6 +33,7 @@ import plus.dragons.createenchantmentindustry.common.registry.CEIFluids;
  */
 public final class CEIExperienceTankBehaviour extends SmartFluidTankBehaviour {
     private final boolean externalInsertion;
+    private Runnable immediateFluidUpdateCallback = () -> {};
     private boolean creative;
 
     public CEIExperienceTankBehaviour(
@@ -45,19 +47,40 @@ public final class CEIExperienceTankBehaviour extends SmartFluidTankBehaviour {
 
     @Override
     public CEIExperienceTankBehaviour whenFluidUpdates(Runnable fluidUpdateCallback) {
-        super.whenFluidUpdates(fluidUpdateCallback);
+        immediateFluidUpdateCallback = fluidUpdateCallback;
+        super.whenFluidUpdates(this::notifyFluidUpdated);
         return this;
+    }
+
+    @Override
+    public void initialize() {
+        super.initialize();
+        notifyFluidUpdated();
+    }
+
+    @Override
+    public void read(ValueInput input, boolean clientPacket) {
+        super.read(input, clientPacket);
+        notifyFluidUpdated();
+    }
+
+    /** Replaces the stored experience while preserving update and synchronization semantics. */
+    public void setFluid(FluidStack stack) {
+        if (!stack.isEmpty() && stack.getFluid() != CEIFluids.EXPERIENCE.getSource()) {
+            throw new IllegalArgumentException("CEI experience tanks only accept liquid experience");
+        }
+        TankSegment tank = getPrimaryHandler();
+        tank.setFluid(stack);
+        tank.markDirty();
+        notifyFluidUpdated();
     }
 
     public void setCreative(boolean creative) {
         this.creative = creative;
         TankSegment tank = getPrimaryHandler();
-        if (creative) {
-            tank.setFluid(new FluidStack(CEIFluids.EXPERIENCE.getSource(), tank.getMaxAmountPerStack()));
-        } else {
-            tank.setFluid(FluidStack.EMPTY);
-        }
-        tank.markDirty();
+        setFluid(creative
+                ? new FluidStack(CEIFluids.EXPERIENCE.getSource(), tank.getMaxAmountPerStack())
+                : FluidStack.EMPTY);
     }
 
     public boolean isCreativeTank() {
@@ -74,13 +97,14 @@ public final class CEIExperienceTankBehaviour extends SmartFluidTankBehaviour {
         }
         TankSegment tank = getPrimaryHandler();
         FluidStack current = tank.getFluid();
-        if (!current.isEmpty() && !FluidStack.areFluidsAndComponentsEqual(current, stack)) {
+        if (!current.isEmpty() && !FluidStack.areFluidsAndComponentsEqualIgnoreCapacity(current, stack)) {
             return 0;
         }
         int inserted = Math.min(stack.getAmount(), tank.getMaxAmountPerStack() - current.getAmount());
         if (!simulate && inserted > 0) {
             tank.setFluid(current.isEmpty() ? stack.copyWithAmount(inserted) : current.copyWithAmount(current.getAmount() + inserted));
             tank.markDirty();
+            notifyFluidUpdated();
         }
         return inserted;
     }
@@ -95,7 +119,7 @@ public final class CEIExperienceTankBehaviour extends SmartFluidTankBehaviour {
         }
         TankSegment tank = getPrimaryHandler();
         FluidStack current = tank.getFluid();
-        if (current.isEmpty() || !FluidStack.areFluidsAndComponentsEqual(current, stack)) {
+        if (current.isEmpty() || !FluidStack.areFluidsAndComponentsEqualIgnoreCapacity(current, stack)) {
             return 0;
         }
         int extracted = Math.min(stack.getAmount(), current.getAmount());
@@ -103,8 +127,13 @@ public final class CEIExperienceTankBehaviour extends SmartFluidTankBehaviour {
             int remainder = current.getAmount() - extracted;
             tank.setFluid(remainder == 0 ? FluidStack.EMPTY : current.copyWithAmount(remainder));
             tank.markDirty();
+            notifyFluidUpdated();
         }
         return extracted;
+    }
+
+    private void notifyFluidUpdated() {
+        immediateFluidUpdateCallback.run();
     }
 
     private static final class Handler extends InternalFluidHandler {
@@ -136,6 +165,12 @@ public final class CEIExperienceTankBehaviour extends SmartFluidTankBehaviour {
                 }
             }
             super.setStack(slot, stack);
+        }
+
+        @Override
+        public void markDirty() {
+            super.markDirty();
+            owner.notifyFluidUpdated();
         }
     }
 }

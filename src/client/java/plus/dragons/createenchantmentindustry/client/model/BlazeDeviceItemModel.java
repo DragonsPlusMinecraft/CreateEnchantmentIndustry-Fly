@@ -44,7 +44,6 @@ import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.item.ItemStackRenderState.LayerRenderState;
 import net.minecraft.client.renderer.item.ModelRenderProperties;
-import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.special.SpecialModelRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -57,6 +56,7 @@ import net.minecraft.world.entity.ItemOwner;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3f;
 import org.joml.Vector3fc;
 import plus.dragons.createenchantmentindustry.common.CEICommon;
 
@@ -101,22 +101,16 @@ public final class BlazeDeviceItemModel
             state.appendModelIdentityElement(foil);
         }
 
-        addLayer(state, displayContext, base, base.properties(), foil, null);
+        addLayer(state, displayContext, base, base.properties(), foil);
         if (hat != null) {
-            addLayer(state, displayContext, hat, base.properties(), foil, RenderKind.HAT);
+            addLayer(state, displayContext, hat, base.properties(), foil);
         }
         if (book) {
             LayerRenderState layer = state.newLayer();
             layer.setRenderType(Sheets.translucentItemSheet());
             layer.setExtents(base.extents());
             base.properties().applyToLayer(layer, displayContext);
-            layer.setupSpecialModel(
-                    this,
-                    new RenderData(
-                            RenderKind.BOOK,
-                            List.of(),
-                            Sheets.translucentItemSheet(),
-                            ItemStackRenderState.FoilType.NONE));
+            layer.setupSpecialModel(this, new RenderData());
         }
     }
 
@@ -125,19 +119,13 @@ public final class BlazeDeviceItemModel
             ItemDisplayContext displayContext,
             BakedPart part,
             ModelRenderProperties properties,
-            ItemStackRenderState.FoilType foil,
-            @Nullable RenderKind special) {
+            ItemStackRenderState.FoilType foil) {
         LayerRenderState layer = state.newLayer();
-        layer.setRenderType(Sheets.translucentItemSheet());
+        layer.setRenderType(Sheets.translucentBlockItemSheet());
         layer.setExtents(part.extents());
         properties.applyToLayer(layer, displayContext);
-        layer.prepareQuadList().addAll(part.quads());
         layer.setFoilType(foil);
-        if (special != null) {
-            layer.setupSpecialModel(
-                    this,
-                    new RenderData(special, part.quads(), Sheets.translucentItemSheet(), foil));
-        }
+        layer.prepareQuadList().addAll(part.quads());
     }
 
     @Override
@@ -150,23 +138,6 @@ public final class BlazeDeviceItemModel
             int overlay,
             boolean glint,
             int packedColor) {
-        if (data.kind() == RenderKind.HAT) {
-            matrices.pushPose();
-            matrices.translate(0.5F, 0.75F, 0.5F);
-            queue.submitItem(
-                    matrices,
-                    displayContext,
-                    light,
-                    overlay,
-                    packedColor,
-                    new int[0],
-                    data.quads(),
-                    data.renderType(),
-                    data.foil());
-            matrices.popPose();
-            return;
-        }
-
         matrices.pushPose();
         matrices.translate(0.0F, -0.3F, 0.0F);
         matrices.mulPose(Axis.ZP.rotationDegrees(90.0F));
@@ -192,16 +163,7 @@ public final class BlazeDeviceItemModel
         throw new UnsupportedOperationException("Render data is supplied during item-model update");
     }
 
-    private enum RenderKind {
-        HAT,
-        BOOK
-    }
-
-    public record RenderData(
-            RenderKind kind,
-            List<BakedQuad> quads,
-            RenderType renderType,
-            ItemStackRenderState.FoilType foil) {}
+    public record RenderData() {}
 
     private record BakedPart(
             List<BakedQuad> quads,
@@ -248,7 +210,7 @@ public final class BlazeDeviceItemModel
             ModelBaker baker = context.blockModelBaker();
             BakedPart bakedBase = bake(baker, model);
             return new BlazeDeviceItemModel(
-                    bakedBase, hat.map(id -> bake(baker, id)).orElse(null), book);
+                    bakedBase, hat.map(id -> bakeTranslated(baker, id, 0.5F, 0.75F, 0.5F)).orElse(null), book);
         }
 
         private static BakedPart bake(ModelBaker baker, Identifier id) {
@@ -258,6 +220,32 @@ public final class BlazeDeviceItemModel
             ModelRenderProperties properties = ModelRenderProperties.fromResolvedModel(baker, model, textures);
             Supplier<Vector3fc[]> extents = Suppliers.memoize(() -> BlockModelWrapper.computeExtents(quads));
             return new BakedPart(quads, properties, extents);
+        }
+
+        private static BakedPart bakeTranslated(ModelBaker baker, Identifier id, float x, float y, float z) {
+            BakedPart part = bake(baker, id);
+            List<BakedQuad> translated = part.quads().stream()
+                    .map(quad -> translate(quad, x, y, z))
+                    .toList();
+            Supplier<Vector3fc[]> extents = Suppliers.memoize(() -> BlockModelWrapper.computeExtents(translated));
+            return new BakedPart(translated, part.properties(), extents);
+        }
+
+        private static BakedQuad translate(BakedQuad quad, float x, float y, float z) {
+            return new BakedQuad(
+                    new Vector3f(quad.position0()).add(x, y, z),
+                    new Vector3f(quad.position1()).add(x, y, z),
+                    new Vector3f(quad.position2()).add(x, y, z),
+                    new Vector3f(quad.position3()).add(x, y, z),
+                    quad.packedUV0(),
+                    quad.packedUV1(),
+                    quad.packedUV2(),
+                    quad.packedUV3(),
+                    quad.tintIndex(),
+                    quad.direction(),
+                    quad.sprite(),
+                    quad.shade(),
+                    quad.lightEmission());
         }
     }
 }

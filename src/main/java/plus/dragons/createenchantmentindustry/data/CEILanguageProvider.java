@@ -36,6 +36,7 @@ import plus.dragons.createenchantmentindustry.common.registry.CEIItems;
 /** Generates the English language file for the supported core feature set only. */
 public final class CEILanguageProvider extends FabricLanguageProvider {
     private static final String INTERFACE_LANG = "/assets/create_enchantment_industry/lang/builtin/interface.json";
+    private static final String PONDER_LANG = "/assets/create_enchantment_industry/lang/builtin/ponder.json";
 
     public CEILanguageProvider(
             FabricDataOutput output, CompletableFuture<HolderLookup.Provider> registries) {
@@ -45,7 +46,8 @@ public final class CEILanguageProvider extends FabricLanguageProvider {
     @Override
     public void generateTranslations(
             HolderLookup.Provider registries, TranslationBuilder builder) {
-        addCoreInterfaceTranslations(builder);
+        addBuiltInTranslations(builder, INTERFACE_LANG);
+        addBuiltInTranslations(builder, PONDER_LANG);
 
         builder.add(CEIBlocks.EXPERIENCE.get(), "Liquid Experience");
         builder.add(CEIBlocks.MECHANICAL_GRINDSTONE.get(), "Mechanical Grindstone");
@@ -86,10 +88,10 @@ public final class CEILanguageProvider extends FabricLanguageProvider {
         CEIAdvancements.provideLang(builder::add);
     }
 
-    private static void addCoreInterfaceTranslations(TranslationBuilder builder) {
-        try (InputStream stream = CEILanguageProvider.class.getResourceAsStream(INTERFACE_LANG)) {
+    private static void addBuiltInTranslations(TranslationBuilder builder, String resource) {
+        try (InputStream stream = CEILanguageProvider.class.getResourceAsStream(resource)) {
             if (stream == null) {
-                throw new IllegalStateException("Missing built-in language template " + INTERFACE_LANG);
+                throw new IllegalStateException("Missing built-in language template " + resource);
             }
             JsonObject translations = JsonParser.parseReader(
                     new InputStreamReader(stream, StandardCharsets.UTF_8))
@@ -102,7 +104,7 @@ public final class CEILanguageProvider extends FabricLanguageProvider {
                 builder.add(entry.getKey(), value.getAsString());
             }
         } catch (IOException exception) {
-            throw new IllegalStateException("Failed to read built-in language template " + INTERFACE_LANG, exception);
+            throw new IllegalStateException("Failed to read built-in language template " + resource, exception);
         }
     }
 }

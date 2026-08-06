@@ -274,16 +274,11 @@ public class PrinterBlockEntity extends SmartBlockEntity {
 
     public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
         assert level != null;
-        FluidStack fluid = tank.getPrimaryHandler().getFluid();
-        boolean added = false;
-        if (!fluid.isEmpty()) {
-            tooltip.add(fluid.getName());
-            tooltip.add(Component.literal(
-                    fluid.getAmount() + " / " + tank.getPrimaryHandler().getMaxAmountPerStack()));
-            added = true;
-        }
-        added |= printer.getPrintingBehaviour().addToGoggleTooltip(tooltip, isPlayerSneaking);
-        return added;
+        return printer.getPrintingBehaviour().addToGoggleTooltip(tooltip, isPlayerSneaking);
+    }
+
+    public SmartFluidTankBehaviour getTank() {
+        return tank;
     }
 
     private record ActivePrinting(
@@ -332,7 +327,7 @@ public class PrinterBlockEntity extends SmartBlockEntity {
         }
 
         boolean matchesFluid(FluidStack stack) {
-            return FluidStack.areFluidsAndComponentsEqual(fluid, stack);
+            return FluidStack.areFluidsAndComponentsEqualIgnoreCapacity(fluid, stack);
         }
     }
 }

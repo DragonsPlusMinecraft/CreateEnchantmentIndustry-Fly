@@ -36,6 +36,7 @@ import plus.dragons.createdragonsplus.common.processing.blaze.BlazeMovementRende
 import plus.dragons.createenchantmentindustry.client.model.BlazeDeviceItemModel;
 import plus.dragons.createenchantmentindustry.client.model.CEIPartialModels;
 import plus.dragons.createenchantmentindustry.client.ponder.CEIPonderPlugin;
+import plus.dragons.createenchantmentindustry.client.tooltip.CEITooltipBehaviours;
 import plus.dragons.createenchantmentindustry.common.fluids.printer.PrinterRenderer;
 import plus.dragons.createenchantmentindustry.common.kinetics.grindstone.GrindstoneDrainRenderer;
 import plus.dragons.createenchantmentindustry.common.processing.classic_enchanter.ClassicBlazeEnchanterRenderer;
@@ -58,6 +59,7 @@ public final class CEIClient implements ClientModInitializer {
         CEIFluidRenderers.register();
         registerRenderLayers();
         registerBlazeModelsAndMovement();
+        CEITooltipBehaviours.register();
         registerBlockEntityRenderers();
         PonderIndex.addPlugin(new CEIPonderPlugin());
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {

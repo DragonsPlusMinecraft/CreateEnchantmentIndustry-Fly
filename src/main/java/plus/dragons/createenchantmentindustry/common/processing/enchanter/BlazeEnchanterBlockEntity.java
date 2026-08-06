@@ -374,7 +374,7 @@ public class BlazeEnchanterBlockEntity extends BlazeExperienceBlockEntity implem
     }
 
     public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
-        boolean added = false;
+        boolean added = super.addToGoggleTooltip(tooltip, isPlayerSneaking);
         added |= enchanter.addToGoggleTooltip(tooltip, isPlayerSneaking);
         return added;
     }

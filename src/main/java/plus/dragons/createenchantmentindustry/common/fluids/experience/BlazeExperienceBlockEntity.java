@@ -28,8 +28,10 @@ import java.util.List;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
 import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import net.fabricmc.fabric.api.transfer.v1.storage.base.CombinedStorage;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -45,6 +47,7 @@ import plus.dragons.createdragonsplus.common.processing.blaze.BlazeBlockEntity;
 import plus.dragons.createenchantmentindustry.common.registry.CEIFluids;
 import plus.dragons.createenchantmentindustry.util.BlazeLightningHelper;
 import plus.dragons.createenchantmentindustry.util.CEIFluidUnits;
+import plus.dragons.createenchantmentindustry.util.CEILang;
 
 public abstract class BlazeExperienceBlockEntity extends BlazeBlockEntity {
     public static final String LIGHTNING_BOLT_EXPERIENCE_CHARGE_KEY = BlazeLightningHelper.LIGHTNING_BOLT_EXPERIENCE_CHARGE_KEY;
@@ -121,6 +124,34 @@ public abstract class BlazeExperienceBlockEntity extends BlazeBlockEntity {
 
     public int getTotalExperience() {
         return getNormalExperience() + getSpecialExperience();
+    }
+
+    public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
+        if (normalTank == null || specialTank == null) {
+            return false;
+        }
+        CEILang.translateCreate("gui.goggles.fluid_container").forGoggles(tooltip);
+        addTankToGoggleTooltip(tooltip, false, getNormalTank());
+        addTankToGoggleTooltip(tooltip, true, getSpecialTank());
+        return true;
+    }
+
+    private static void addTankToGoggleTooltip(List<Component> tooltip, boolean special, TankSegment tank) {
+        CEILang.Builder mb = CEILang.translateCreate("generic.unit.millibuckets");
+        CEILang.translate(special
+                ? "gui.goggles.blaze_experience.super_experience"
+                : "gui.goggles.blaze_experience.experience")
+                .style(ChatFormatting.GRAY)
+                .forGoggles(tooltip, 1);
+        CEILang.builder()
+                .add(CEILang.number(CEIFluidUnits.toMillibuckets(tank.getFluid().getAmount()))
+                        .add(mb)
+                        .style(special ? ChatFormatting.BLUE : ChatFormatting.GOLD))
+                .add(Component.literal(" / ").withStyle(ChatFormatting.GRAY))
+                .add(CEILang.number(CEIFluidUnits.toMillibuckets(tank.getMaxAmountPerStack()))
+                        .add(mb)
+                        .style(ChatFormatting.DARK_GRAY))
+                .forGoggles(tooltip, 2);
     }
 
     public @Nullable Storage<FluidVariant> getFluidStorage(@Nullable Direction side) {

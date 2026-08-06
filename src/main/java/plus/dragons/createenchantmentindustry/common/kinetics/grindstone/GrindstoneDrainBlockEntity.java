@@ -42,7 +42,6 @@ import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ItemParticleOption;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.Clearable;
@@ -459,14 +458,8 @@ public class GrindstoneDrainBlockEntity extends KineticBlockEntity implements Cl
         sendData();
     }
 
-    public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
-        FluidStack fluid = tank.getPrimaryHandler().getFluid();
-        if (fluid.isEmpty())
-            return false;
-        tooltip.add(fluid.getName());
-        tooltip.add(Component.literal(
-                fluid.getAmount() + " / " + tank.getPrimaryHandler().getMaxAmountPerStack()));
-        return true;
+    public SmartFluidTankBehaviour getTank() {
+        return tank;
     }
 
     @Override

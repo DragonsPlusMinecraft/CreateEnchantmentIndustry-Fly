@@ -472,7 +472,7 @@ public class BlazeForgerBlockEntity extends BlazeExperienceBlockEntity implement
     }
 
     public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
-        boolean added = false;
+        boolean added = super.addToGoggleTooltip(tooltip, isPlayerSneaking);
         var style = special
                 ? (cursed ? ChatFormatting.RED : ChatFormatting.BLUE)
                 : ChatFormatting.GOLD;

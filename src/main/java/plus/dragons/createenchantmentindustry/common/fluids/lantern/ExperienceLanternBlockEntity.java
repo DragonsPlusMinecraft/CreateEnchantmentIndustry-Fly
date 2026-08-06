@@ -58,6 +58,7 @@ public class ExperienceLanternBlockEntity extends SmartBlockEntity {
         super.tick();
         if (!level.isClientSide() && level.getGameTime() % 10 == 0) {
             drainExp();
+            updateLightLevel();
         }
         if (!level.isClientSide() && CEIConfig.fluids().experienceLanternPullToggle.get()) {
             pullExp();
@@ -69,7 +70,8 @@ public class ExperienceLanternBlockEntity extends SmartBlockEntity {
     }
 
     protected void drainExp() {
-        List<Player> players = level.getEntitiesOfClass(Player.class, effectiveAABB, player -> player.isAlive() && !player.isSpectator());
+        List<Player> players = level.getEntitiesOfClass(
+                Player.class, effectiveAABB, player -> player.isAlive() && !player.isSpectator());
         if (!players.isEmpty()) {
             AtomicInteger sum = new AtomicInteger();
             players.forEach(player -> {
@@ -140,16 +142,27 @@ public class ExperienceLanternBlockEntity extends SmartBlockEntity {
         int capacity = Math.toIntExact(
                 CEIFluidUnits.millibuckets(CEIConfig.fluids().experienceLanternFluidCapacity.get()));
         tank = new CEIExperienceTankBehaviour(SmartFluidTankBehaviour.INPUT, this, capacity, true)
-                .whenFluidUpdates(this::onFluidStackChanged);
+                .whenFluidUpdates(this::updateLightLevel);
         behaviours.add(tank);
     }
 
-    protected void onFluidStackChanged() {
+    protected void updateLightLevel() {
+        if (level == null || isVirtual())
+            return;
         var segment = tank.getPrimaryHandler();
-        int light = (int) (segment.getFluid().getAmount() / (float) segment.getMaxAmountPerStack() * 15f);
-        light = Math.min(Math.max(0, light), 15);
-        if (level != null && getBlockState().getValue(ExperienceLanternBlock.LIGHT) != light)
-            level.setBlockAndUpdate(getBlockPos(), getBlockState().setValue(ExperienceLanternBlock.LIGHT, light));
+        int capacity = segment.getMaxAmountPerStack();
+        int light = capacity <= 0
+                ? 0
+                : (int) Math.min(15, Math.max(0, (long) segment.getFluid().getAmount() * 15 / capacity));
+        BlockState state = level.getBlockState(getBlockPos());
+        if (!state.hasProperty(ExperienceLanternBlock.LIGHT))
+            return;
+        if (state.getValue(ExperienceLanternBlock.LIGHT) == light)
+            return;
+        BlockState updatedState = state.setValue(ExperienceLanternBlock.LIGHT, light);
+        level.setBlockAndUpdate(getBlockPos(), updatedState);
+        level.getChunkSource().getLightEngine().checkBlock(getBlockPos());
+        level.setBlocksDirty(getBlockPos(), state, updatedState);
     }
 
     public @Nullable Storage<FluidVariant> getFluidStorage(@Nullable Direction side) {

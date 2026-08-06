@@ -62,9 +62,7 @@ public class ExperienceLanternMountedStorage
     @Override
     public void unmount(Level level, BlockState state, BlockPos pos, @Nullable BlockEntity blockEntity) {
         if (blockEntity instanceof ExperienceLanternBlockEntity lantern) {
-            var tank = lantern.getTank().getPrimaryHandler();
-            tank.setFluid(getFluid().copy());
-            tank.markDirty();
+            lantern.getTank().setFluid(getFluid().copy());
         }
     }
 
@@ -95,9 +93,7 @@ public class ExperienceLanternMountedStorage
     public void afterSync(Contraption contraption, BlockPos localPos) {
         BlockEntity blockEntity = AllClientHandle.INSTANCE.getBlockEntityClientSide(contraption, localPos);
         if (blockEntity instanceof ExperienceLanternBlockEntity lantern) {
-            var tank = lantern.getTank().getPrimaryHandler();
-            tank.setFluid(getFluid().copy());
-            tank.markDirty();
+            lantern.getTank().setFluid(getFluid().copy());
         }
     }
 

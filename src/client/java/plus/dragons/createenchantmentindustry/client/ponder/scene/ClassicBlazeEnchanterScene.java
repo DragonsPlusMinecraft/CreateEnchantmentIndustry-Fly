@@ -229,7 +229,7 @@ public class ClassicBlazeEnchanterScene {
         scene.world().modifyBlockEntity(util.grid().at(2, 1, 2), ClassicBlazeEnchanterBlockEntity.class,
                 be -> be.getSpecialTank().setFluid(CEIFluidUnits.stack(CEIFluids.EXPERIENCE.getSource(), 4000)));
         scene.world().modifyBlock(util.grid().at(2, 1, 2), bs -> bs.setValue(BlazeBlock.HEAT_LEVEL, BlazeBurnerBlock.HeatLevel.SEETHING), false);
-        scene.world().instructArm(armPos, ArmBlockEntity.Phase.MOVE_TO_INPUT, ItemStack.EMPTY, -1);
+        scene.world().instructArm(armPos, ArmBlockEntity.Phase.SEARCH_INPUTS, ItemStack.EMPTY, -1);
         scene.idle(20);
     }
 }
