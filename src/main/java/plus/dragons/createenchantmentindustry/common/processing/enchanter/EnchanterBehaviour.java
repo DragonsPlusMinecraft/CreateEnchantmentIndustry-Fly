@@ -45,7 +45,8 @@ import plus.dragons.createenchantmentindustry.common.processing.enchanter.behavi
 import plus.dragons.createenchantmentindustry.util.CEILang;
 
 public class EnchanterBehaviour extends ServerScrollValueBehaviour {
-    public static final BehaviourType<EnchanterBehaviour> TYPE = new BehaviourType<>();
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    public static final BehaviourType<EnchanterBehaviour> TYPE = (BehaviourType) ServerScrollValueBehaviour.TYPE;
     public static final String LEVEL = "EnchantingLevel";
     public static final String TEMPLATE = "EnchantingTemplate";
     private final BlazeEnchanterBlockEntity enchanter;

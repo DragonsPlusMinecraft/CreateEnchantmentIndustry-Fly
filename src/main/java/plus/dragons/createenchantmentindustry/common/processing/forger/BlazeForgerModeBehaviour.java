@@ -42,7 +42,12 @@ public class BlazeForgerModeBehaviour extends ServerScrollValueBehaviour {
 
     @Override
     public void setValue(int value) {
-        forger.setMode(BlazeForgerMode.BY_ID.apply(Mth.clamp(value, 0, BlazeForgerMode.values().length - 1)));
+        this.value = Mth.clamp(value, 0, BlazeForgerMode.values().length - 1);
+        forger.setMode(BlazeForgerMode.BY_ID.apply(this.value));
+    }
+
+    void syncFromMode(BlazeForgerMode mode) {
+        value = mode.ordinal();
     }
 
     @Override

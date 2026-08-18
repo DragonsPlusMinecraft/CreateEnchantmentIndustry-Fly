@@ -22,7 +22,10 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import com.zurrtum.create.catnip.math.AngleHelper;
+import com.zurrtum.create.catnip.math.VecHelper;
 import com.zurrtum.create.client.catnip.animation.AnimationTickHolder;
+import com.zurrtum.create.client.foundation.blockEntity.behaviour.filtering.FilteringRenderer;
+import com.zurrtum.create.client.foundation.blockEntity.behaviour.filtering.FilteringRenderer.FilterRenderState;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.object.book.BookModel;
 import net.minecraft.client.renderer.LightTexture;
@@ -69,6 +72,11 @@ public final class ClassicBlazeEnchanterRenderer
             Vec3 cameraPos,
             @Nullable ModelFeatureRenderer.CrumblingOverlay crumblingOverlay) {
         ClassicRenderState state = (ClassicRenderState) baseState;
+        double distance = blockEntity.isVirtual()
+                ? -1
+                : cameraPos.distanceToSqr(VecHelper.getCenterOf(state.blockPos));
+        state.filter = FilteringRenderer.getFilterRenderState(
+                blockEntity, state.blockState, itemModelResolver, distance);
         float time = AnimationTickHolder.getRenderTime(blockEntity.getLevel());
         float flip = Mth.lerp(tickProgress, blockEntity.oFlip, blockEntity.flip);
         float page0 = Mth.clamp(Mth.frac(flip + 0.25F) * 1.6F - 0.3F, 0.0F, 1.0F);
@@ -105,6 +113,9 @@ public final class ClassicBlazeEnchanterRenderer
             SubmitNodeCollector queue,
             CameraRenderState cameraState) {
         ClassicRenderState state = (ClassicRenderState) baseState;
+        if (state.filter != null) {
+            state.filter.render(state.blockState, queue, matrices, state.lightCoords);
+        }
         if (state.book != null) {
             matrices.pushPose();
             matrices.translate(0.5, 0.25 + state.bookBob, 0.5);
@@ -131,6 +142,7 @@ public final class ClassicBlazeEnchanterRenderer
     }
 
     public static final class ClassicRenderState extends BlazeBlockRenderState {
+        private @Nullable FilterRenderState filter;
         private @Nullable BookGeometry book;
         private float bookBob;
         private float bookAngle;

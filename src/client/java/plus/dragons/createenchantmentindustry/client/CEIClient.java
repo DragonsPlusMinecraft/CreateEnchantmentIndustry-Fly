@@ -57,6 +57,7 @@ public final class CEIClient implements ClientModInitializer {
         AllModels.register(BlazeDeviceItemModel.ID, BlazeDeviceItemModel.Unbaked.CODEC);
         CEIPartialModels.register();
         CEIFluidRenderers.register();
+        CEIClientBehaviours.register();
         registerRenderLayers();
         registerBlazeModelsAndMovement();
         CEITooltipBehaviours.register();

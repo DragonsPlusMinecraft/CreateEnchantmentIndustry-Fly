@@ -42,7 +42,8 @@ import plus.dragons.createenchantmentindustry.common.fluids.printer.behaviour.Pr
 import plus.dragons.createenchantmentindustry.common.fluids.printer.behaviour.RecipePrintingBehaviour;
 
 public class PrinterBehaviour extends ServerFilteringBehaviour {
-    public static final BehaviourType<PrinterBehaviour> TYPE = new BehaviourType<>();
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    public static final BehaviourType<PrinterBehaviour> TYPE = (BehaviourType) ServerFilteringBehaviour.TYPE;
     public static final String TEMPLATE = "PrintingTemplate";
     private final SmartFluidTankBehaviour tank;
     private PrintingBehaviour printing = new RecipePrintingBehaviour(ItemStack.EMPTY);

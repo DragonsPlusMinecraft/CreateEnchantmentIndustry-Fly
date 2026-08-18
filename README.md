@@ -2,7 +2,7 @@
 
 Create: Enchantment Industry Fly brings the core experience and enchantment automation from Create: Enchantment Industry to the Fabric-based Create Fly ecosystem.
 
-The current `2.5.1-p.1` build is an **alpha preview** for Minecraft 1.21.11. Back up worlds before testing it.
+The current `2.5.1` build is a **beta** for Minecraft 1.21.11. Back up worlds before updating or testing it.
 
 ## Requirements
 
@@ -23,7 +23,7 @@ The current `2.5.1-p.1` build is an **alpha preview** for Minecraft 1.21.11. Bac
 
 ## Notes for players and modpack authors
 
-- This preview is intended for new Minecraft 1.21.11 worlds.
+- Existing Create: Enchantment Industry Fly worlds remain compatible; back up worlds before updating.
 - NeoForge 1.21.1 worlds, block entity data and TOML configuration files are not migrated.
 - Configuration files are JSON files under `config/create_enchantment_industry/`.
 - Integrations for Apothic Enchanting, Apotheosis, Sable, Sable-Apotheosis and Touhou Little Maid are not included.

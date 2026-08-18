@@ -43,7 +43,8 @@ import plus.dragons.createenchantmentindustry.config.CEIConfig;
 import plus.dragons.createenchantmentindustry.util.CEILang;
 
 public class ClassicEnchanterBehaviour extends ServerFilteringBehaviour {
-    public static final BehaviourType<ClassicEnchanterBehaviour> TYPE = new BehaviourType<>();
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    public static final BehaviourType<ClassicEnchanterBehaviour> TYPE = (BehaviourType) ServerFilteringBehaviour.TYPE;
     private final ClassicBlazeEnchanterBlockEntity enchanter;
 
     public ClassicEnchanterBehaviour(ClassicBlazeEnchanterBlockEntity enchanter) {

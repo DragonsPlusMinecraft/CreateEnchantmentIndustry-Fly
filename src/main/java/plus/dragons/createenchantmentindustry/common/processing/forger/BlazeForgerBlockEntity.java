@@ -118,6 +118,7 @@ public class BlazeForgerBlockEntity extends BlazeExperienceBlockEntity implement
         super.read(input, clientPacket);
         processingTime = input.getIntOr("ProcessingTime", -1);
         mode = BlazeForgerMode.BY_ID.apply(input.getIntOr("ForgingMode", 0));
+        modeSelector.syncFromMode(mode);
         inventory.read(input.childOrEmpty("Inventory"));
         activeForging = input.child("ActiveForging").map(ActiveForging::load).orElse(null);
         if (processingTime >= 0 && activeForging == null)
@@ -270,6 +271,7 @@ public class BlazeForgerBlockEntity extends BlazeExperienceBlockEntity implement
     }
 
     public void setMode(BlazeForgerMode mode) {
+        modeSelector.syncFromMode(mode);
         if (this.mode == mode)
             return;
         this.mode = mode;
