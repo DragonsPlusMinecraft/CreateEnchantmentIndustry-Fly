@@ -171,7 +171,7 @@ publishMods {
     changelog = providers.fileContents(layout.projectDirectory.file('CHANGELOG.md')).asText
     version = mod_version
     type = me.modmuss50.mpp.ReleaseType.of(mod_release_channel)
-    displayName = "${mod_name} ${mod_version} for Create Fly ${create_fly_version}"
+    displayName = "CEI ${mod_version} for Create Fly ${create_fly_version}"
     modLoaders.add('fabric')
     dryRun = providers.environmentVariable('MOD_PUBLISH_DRY_RUN').map { it.toBoolean() }.orElse(false)
 
