@@ -62,7 +62,7 @@ public class ClassicEnchanterBehaviour extends ServerFilteringBehaviour {
         var result = stack.copy();
         var availableEnchantment = filterAvailableEnchantment(stack);
         var apply = WeightedRandom.getRandomItem(
-                enchanter.getLevel().random,
+                enchanter.getLevel().getRandom(),
                 availableEnchantment.stream()
                         .map(entry -> new EnchantmentInstance(entry.getKey(), entry.getValue()))
                         .toList(),
@@ -73,7 +73,7 @@ public class ClassicEnchanterBehaviour extends ServerFilteringBehaviour {
         var applyLevel = getProposedLevel(stack, enchantment.enchantment(), enchantment.level());
         if (enchanter.special) {
             if (enchanter.cursed) {
-                if (enchanter.getLevel().random.nextFloat() < CEIConfig.processing().classicBlazeEnchanterSuperEnchantingCurseLevelDroppingRate.get()) {
+                if (enchanter.getLevel().getRandom().nextFloat() < CEIConfig.processing().classicBlazeEnchanterSuperEnchantingCurseLevelDroppingRate.get()) {
                     applyLevel = Math.max(1, enchantment.level() - 1);
                 }
             }
@@ -93,7 +93,7 @@ public class ClassicEnchanterBehaviour extends ServerFilteringBehaviour {
         var targetEnchantment = CEIItemData.getEnchantmentsForCrafting(filter.item());
         return targetEnchantment.entrySet().stream()
                 .filter(entry -> {
-                    if (!CEIEnchantmentHelper.canApplyAtEnchantingTable(entry.getKey(), stack)) return false;
+                    if (!CEIEnchantmentHelper.supportsEnchantment(stack, entry.getKey())) return false;
                     int currentLevel = stackEnchantment.getOrDefault(entry.getKey(), 0);
                     int proposedLevel = getProposedLevel(stack, entry.getKey(), entry.getValue());
                     int levelLimit = CEIEnchantmentHelper.maxLevel(entry.getKey());

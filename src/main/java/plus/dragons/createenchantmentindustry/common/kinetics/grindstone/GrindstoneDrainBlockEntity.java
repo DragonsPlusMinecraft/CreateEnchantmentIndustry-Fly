@@ -33,7 +33,7 @@ import com.zurrtum.create.infrastructure.transfer.FluidInventoryStorage;
 import java.util.List;
 import java.util.Optional;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
-import net.fabricmc.fabric.api.transfer.v1.item.InventoryStorage;
+import net.fabricmc.fabric.api.transfer.v1.item.ContainerStorage;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
 import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import net.minecraft.core.BlockPos;
@@ -49,6 +49,7 @@ import net.minecraft.world.Containers;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.item.crafting.SingleRecipeInput;
@@ -115,7 +116,7 @@ public class GrindstoneDrainBlockEntity extends KineticBlockEntity implements Cl
     }
 
     public @Nullable Storage<ItemVariant> getItemStorage(@Nullable Direction side) {
-        return side != Direction.DOWN ? InventoryStorage.of(inventory, side) : null;
+        return side != Direction.DOWN ? ContainerStorage.of(inventory, side) : null;
     }
 
     public @Nullable Storage<FluidVariant> getFluidStorage(@Nullable Direction side) {
@@ -257,7 +258,7 @@ public class GrindstoneDrainBlockEntity extends KineticBlockEntity implements Cl
                         new SingleRecipeInput(inputStack),
                         level);
         if (polishing.isPresent() && AllRecipeTypes.CAN_BE_AUTOMATED.test(polishing.get())) {
-            var polished = polishing.get().value().result().copy();
+            var polished = polishing.get().value().result().create();
             advancement.trigger(CEIAdvancements.GRIND_TO_POLISH.builtinTrigger());
             inventory.clearContent();
             inventory.setItem(1, polished);
@@ -288,11 +289,11 @@ public class GrindstoneDrainBlockEntity extends KineticBlockEntity implements Cl
         if (stack.getItem() instanceof BlockItem blockItem)
             particleData = new BlockParticleOption(ParticleTypes.BLOCK, blockItem.getBlock().defaultBlockState());
         else
-            particleData = new ItemParticleOption(ParticleTypes.ITEM, stack);
+            particleData = new ItemParticleOption(ParticleTypes.ITEM, ItemStackTemplate.fromNonEmptyStack(stack));
 
         Vec3 pos = Vec3.atBottomCenterOf(this.worldPosition).add(0, 1, 0);
         for (int i = 0; i < 10; i++) {
-            Vec3 motion = VecHelper.offsetRandomly(new Vec3(0, 0.25f, 0), level.random, .125f);
+            Vec3 motion = VecHelper.offsetRandomly(new Vec3(0, 0.25f, 0), level.getRandom(), .125f);
             level.addParticle(particleData, pos.x, pos.y, pos.z, motion.x, motion.y, motion.y);
         }
     }
@@ -308,7 +309,7 @@ public class GrindstoneDrainBlockEntity extends KineticBlockEntity implements Cl
             particleData = new BlockParticleOption(ParticleTypes.BLOCK, blockItem.getBlock().defaultBlockState());
             speed = 1f;
         } else {
-            particleData = new ItemParticleOption(ParticleTypes.ITEM, stack);
+            particleData = new ItemParticleOption(ParticleTypes.ITEM, ItemStackTemplate.fromNonEmptyStack(stack));
             speed = .125f;
         }
 
@@ -323,7 +324,7 @@ public class GrindstoneDrainBlockEntity extends KineticBlockEntity implements Cl
                 pos.y,
                 pos.z + inputSide.getStepZ() * offset,
                 inputSide.getStepX() * speed,
-                level.random.nextFloat() * speed,
+                level.getRandom().nextFloat() * speed,
                 inputSide.getStepZ() * speed);
     }
 

@@ -29,7 +29,7 @@ import net.minecraft.resources.ResourceKey;
 import plus.dragons.createenchantmentindustry.common.registry.CEIDataMaps;
 
 /**
- * A Fabric 1.21.11 representation of CEI's resource-pack data-map type.
+ * A Fabric 26.1.2 representation of CEI's resource-pack data-map type.
  *
  * <p>The type only describes the registry, id and codec. Values live in the immutable snapshots managed by
  * {@link CEIDataMaps}; keeping those responsibilities separate prevents partially applied reloads.</p>

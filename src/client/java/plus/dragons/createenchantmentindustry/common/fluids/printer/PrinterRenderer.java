@@ -28,14 +28,13 @@ import com.zurrtum.create.client.catnip.render.SuperByteBuffer;
 import com.zurrtum.create.client.foundation.blockEntity.renderer.SmartBlockEntityRenderer;
 import com.zurrtum.create.foundation.blockEntity.behaviour.fluid.SmartFluidTankBehaviour.TankSegment;
 import com.zurrtum.create.infrastructure.fluids.FluidStack;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.client.renderer.state.CameraRenderState;
-import net.minecraft.core.component.DataComponentPatch;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.util.Mth;
-import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 import plus.dragons.createenchantmentindustry.client.model.CEIPartialModels;
@@ -70,21 +69,28 @@ public final class PrinterRenderer
             level = Math.max(level, 0.175F) * (11 / 16.0F);
             float min = 2.5F / 16.0F;
             float max = min + 11 / 16.0F;
-            state.fluid = new FluidGeometry(
+            state.fluid = FluidRenderHelper.extractFluidRenderState(
+                    null,
+                    null,
+                    Minecraft.getInstance().getModelManager().getFluidStateModelSet(),
                     stack.getFluid(),
                     stack.getComponentChanges(),
                     min,
                     min,
+                    min,
                     max,
                     min + level,
-                    state.lightCoords);
+                    max,
+                    state.lightCoords,
+                    false,
+                    true);
         }
 
         float progress = getProgress(printer.processingTicks - tickProgress);
         state.machine = new MachineGeometry(
-                CachedBuffers.partial(CEIPartialModels.PRINTER_NOZZLE_TOP, state.blockState),
-                CachedBuffers.partial(CEIPartialModels.PRINTER_NOZZLE_BOTTOM, state.blockState),
-                CachedBuffers.partial(CEIPartialModels.PRINTER_PISTON, state.blockState),
+                CachedBuffers.partial(CEIPartialModels.PRINTER_NOZZLE_TOP, printer.getBlockState()),
+                CachedBuffers.partial(CEIPartialModels.PRINTER_NOZZLE_BOTTOM, printer.getBlockState()),
+                CachedBuffers.partial(CEIPartialModels.PRINTER_PISTON, printer.getBlockState()),
                 progress,
                 state.lightCoords);
     }
@@ -97,7 +103,7 @@ public final class PrinterRenderer
             CameraRenderState cameraState) {
         super.submit(state, matrices, queue, cameraState);
         if (state.fluid != null) {
-            queue.submitCustomGeometry(matrices, RenderTypes.translucentMovingBlock(), state.fluid);
+            state.fluid.submit(matrices, queue);
         }
         if (state.machine != null) {
             queue.submitCustomGeometry(matrices, RenderTypes.solidMovingBlock(), state.machine);
@@ -121,35 +127,8 @@ public final class PrinterRenderer
     }
 
     public static final class PrinterRenderState extends SmartRenderState {
-        private @Nullable FluidGeometry fluid;
+        private @Nullable FluidRenderHelper.FluidRenderState fluid;
         private @Nullable MachineGeometry machine;
-    }
-
-    private record FluidGeometry(
-            Fluid fluid,
-            DataComponentPatch components,
-            float min,
-            float minY,
-            float max,
-            float maxY,
-            int light) implements SubmitNodeCollector.CustomGeometryRenderer {
-        @Override
-        public void render(PoseStack.Pose pose, VertexConsumer consumer) {
-            FluidRenderHelper.renderFluidBox(
-                    fluid,
-                    components,
-                    min,
-                    minY,
-                    min,
-                    max,
-                    maxY,
-                    max,
-                    consumer,
-                    pose,
-                    light,
-                    false,
-                    true);
-        }
     }
 
     private record MachineGeometry(

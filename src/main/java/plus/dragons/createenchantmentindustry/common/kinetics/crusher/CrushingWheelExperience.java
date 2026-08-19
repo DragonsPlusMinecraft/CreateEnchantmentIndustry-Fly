@@ -43,10 +43,10 @@ public class CrushingWheelExperience {
         int experience = getScaledExperience(serverLevel, entity);
         if (experience <= 0)
             return;
-        if (serverLevel.random.nextFloat() >= CEIConfig.kinetics().crushingWheelKillDropXpChance.getF())
+        if (serverLevel.getRandom().nextFloat() >= CEIConfig.kinetics().crushingWheelKillDropXpChance.getF())
             return;
 
-        int nuggets = getExperienceNuggets(serverLevel.random, experience);
+        int nuggets = getExperienceNuggets(serverLevel.getRandom(), experience);
         if (nuggets <= 0)
             nuggets = 1;
 
@@ -72,7 +72,7 @@ public class CrushingWheelExperience {
             return 0;
 
         int experience = Mth.floor(scaledExperience);
-        if (level.random.nextFloat() < scaledExperience - experience)
+        if (level.getRandom().nextFloat() < scaledExperience - experience)
             experience++;
         return Math.max(experience, 1);
     }

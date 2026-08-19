@@ -33,12 +33,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.object.book.BookModel;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.renderer.block.model.BakedQuad;
-import net.minecraft.client.renderer.block.model.TextureSlots;
-import net.minecraft.client.renderer.item.BlockModelWrapper;
+import net.minecraft.client.renderer.block.dispatch.BlockModelRotation;
+import net.minecraft.client.renderer.item.CuboidItemModelWrapper;
 import net.minecraft.client.renderer.item.ItemModel;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
@@ -47,21 +44,24 @@ import net.minecraft.client.renderer.item.ModelRenderProperties;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.special.SpecialModelRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.resources.model.BlockModelRotation;
 import net.minecraft.client.resources.model.ModelBaker;
 import net.minecraft.client.resources.model.ResolvedModel;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
+import net.minecraft.client.resources.model.sprite.TextureSlots;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.ItemOwner;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix4fc;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
 import plus.dragons.createenchantmentindustry.common.CEICommon;
 
 /**
- * 1.21.11 item-model implementation for the three CEI blaze devices.
+ * 26.1.2 item-model implementation for the three CEI blaze devices.
  *
  * <p>The base and optional hat are baked as regular item layers. The classic
  * enchanter book remains custom geometry so it uses the vanilla animated book
@@ -75,12 +75,18 @@ public final class BlazeDeviceItemModel
     private final BakedPart base;
     private final @Nullable BakedPart hat;
     private final boolean book;
+    private final Matrix4fc transformation;
     private final Supplier<BookModel> bookModel = Suppliers.memoize(() -> new BookModel(Minecraft.getInstance().getEntityModels().bakeLayer(ModelLayers.BOOK)));
 
-    private BlazeDeviceItemModel(BakedPart base, @Nullable BakedPart hat, boolean book) {
+    private BlazeDeviceItemModel(
+            BakedPart base,
+            @Nullable BakedPart hat,
+            boolean book,
+            Matrix4fc transformation) {
         this.base = base;
         this.hat = hat;
         this.book = book;
+        this.transformation = transformation;
     }
 
     @Override
@@ -103,13 +109,13 @@ public final class BlazeDeviceItemModel
 
         addLayer(state, displayContext, base, base.properties(), foil);
         if (hat != null) {
-            addLayer(state, displayContext, hat, base.properties(), foil);
+            addLayer(state, displayContext, hat, hat.properties(), foil);
         }
         if (book) {
             LayerRenderState layer = state.newLayer();
-            layer.setRenderType(Sheets.translucentItemSheet());
             layer.setExtents(base.extents());
             base.properties().applyToLayer(layer, displayContext);
+            layer.setLocalTransform(transformation);
             layer.setupSpecialModel(this, new RenderData());
         }
     }
@@ -121,9 +127,9 @@ public final class BlazeDeviceItemModel
             ModelRenderProperties properties,
             ItemStackRenderState.FoilType foil) {
         LayerRenderState layer = state.newLayer();
-        layer.setRenderType(Sheets.translucentBlockItemSheet());
         layer.setExtents(part.extents());
         properties.applyToLayer(layer, displayContext);
+        layer.setLocalTransform(transformation);
         layer.setFoilType(foil);
         layer.prepareQuadList().addAll(part.quads());
     }
@@ -131,7 +137,6 @@ public final class BlazeDeviceItemModel
     @Override
     public void submit(
             RenderData data,
-            ItemDisplayContext displayContext,
             PoseStack matrices,
             SubmitNodeCollector queue,
             int light,
@@ -149,7 +154,7 @@ public final class BlazeDeviceItemModel
         queue.submitCustomGeometry(
                 matrices,
                 RenderTypes.entitySolid(BOOK_TEXTURE),
-                new BookGeometry(bookModel.get(), new BookModel.State(0.0F, page0, page1, 1.0F)));
+                new BookGeometry(bookModel.get(), new BookModel.State(0.0F, page0, page1)));
         matrices.popPose();
     }
 
@@ -181,19 +186,19 @@ public final class BlazeDeviceItemModel
             model.renderToBuffer(
                     matrices,
                     consumer,
-                    LightTexture.FULL_BRIGHT,
+                    LightCoordsUtil.FULL_BRIGHT,
                     OverlayTexture.NO_OVERLAY);
         }
     }
 
     public record Unbaked(Identifier model, Optional<Identifier> hat, boolean book)
             implements ItemModel.Unbaked {
-
         public static final MapCodec<Unbaked> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
                 Identifier.CODEC.fieldOf("model").forGetter(Unbaked::model),
                 Identifier.CODEC.optionalFieldOf("hat").forGetter(Unbaked::hat),
                 Codec.BOOL.optionalFieldOf("book", false).forGetter(Unbaked::book))
                 .apply(instance, Unbaked::new));
+
         @Override
         public MapCodec<Unbaked> type() {
             return CODEC;
@@ -206,11 +211,14 @@ public final class BlazeDeviceItemModel
         }
 
         @Override
-        public ItemModel bake(ItemModel.BakingContext context) {
+        public ItemModel bake(ItemModel.BakingContext context, Matrix4fc transformation) {
             ModelBaker baker = context.blockModelBaker();
             BakedPart bakedBase = bake(baker, model);
             return new BlazeDeviceItemModel(
-                    bakedBase, hat.map(id -> bakeTranslated(baker, id, 0.5F, 0.75F, 0.5F)).orElse(null), book);
+                    bakedBase,
+                    hat.map(id -> bakeTranslated(baker, id, 0.5F, 0.75F, 0.5F)).orElse(null),
+                    book,
+                    transformation);
         }
 
         private static BakedPart bake(ModelBaker baker, Identifier id) {
@@ -218,7 +226,7 @@ public final class BlazeDeviceItemModel
             TextureSlots textures = model.getTopTextureSlots();
             List<BakedQuad> quads = model.bakeTopGeometry(textures, baker, BlockModelRotation.IDENTITY).getAll();
             ModelRenderProperties properties = ModelRenderProperties.fromResolvedModel(baker, model, textures);
-            Supplier<Vector3fc[]> extents = Suppliers.memoize(() -> BlockModelWrapper.computeExtents(quads));
+            Supplier<Vector3fc[]> extents = Suppliers.memoize(() -> CuboidItemModelWrapper.computeExtents(quads));
             return new BakedPart(quads, properties, extents);
         }
 
@@ -227,7 +235,7 @@ public final class BlazeDeviceItemModel
             List<BakedQuad> translated = part.quads().stream()
                     .map(quad -> translate(quad, x, y, z))
                     .toList();
-            Supplier<Vector3fc[]> extents = Suppliers.memoize(() -> BlockModelWrapper.computeExtents(translated));
+            Supplier<Vector3fc[]> extents = Suppliers.memoize(() -> CuboidItemModelWrapper.computeExtents(translated));
             return new BakedPart(translated, part.properties(), extents);
         }
 
@@ -241,11 +249,8 @@ public final class BlazeDeviceItemModel
                     quad.packedUV1(),
                     quad.packedUV2(),
                     quad.packedUV3(),
-                    quad.tintIndex(),
                     quad.direction(),
-                    quad.sprite(),
-                    quad.shade(),
-                    quad.lightEmission());
+                    quad.materialInfo());
         }
     }
 }

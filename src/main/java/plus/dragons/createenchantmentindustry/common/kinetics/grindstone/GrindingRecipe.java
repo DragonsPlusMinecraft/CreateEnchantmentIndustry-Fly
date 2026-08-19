@@ -62,8 +62,8 @@ public record GrindingRecipe(
         List<FluidIngredient> fluidIngredients,
         List<FluidStack> fluidResults)
         implements CreateSingleStackRollableRecipe, TimedRecipe {
-
     public static final int DEFAULT_TIME = 100;
+
     public GrindingRecipe {
         results = List.copyOf(results);
         fluidIngredients = List.copyOf(fluidIngredients);
@@ -214,7 +214,7 @@ public record GrindingRecipe(
         }
     }
 
-    public static final class Serializer implements RecipeSerializer<GrindingRecipe> {
+    public static final class Serializer {
         private static final StreamCodec<RegistryFriendlyByteBuf, List<ProcessingOutput>> OUTPUTS_STREAM_CODEC = ProcessingOutput.STREAM_CODEC.apply(ByteBufCodecs.list());
         private static final StreamCodec<RegistryFriendlyByteBuf, List<FluidIngredient>> FLUID_INGREDIENTS_STREAM_CODEC = FluidIngredient.PACKET_CODEC.apply(ByteBufCodecs.list());
         private static final StreamCodec<RegistryFriendlyByteBuf, List<FluidStack>> FLUID_RESULTS_STREAM_CODEC = FluidStack.PACKET_CODEC.apply(ByteBufCodecs.list());
@@ -251,15 +251,8 @@ public record GrindingRecipe(
                 FLUID_RESULTS_STREAM_CODEC.encode(buffer, recipe.fluidResults());
             }
         };
+        public static final RecipeSerializer<GrindingRecipe> INSTANCE = new RecipeSerializer<>(CODEC, STREAM_CODEC);
 
-        @Override
-        public MapCodec<GrindingRecipe> codec() {
-            return CODEC;
-        }
-
-        @Override
-        public StreamCodec<RegistryFriendlyByteBuf, GrindingRecipe> streamCodec() {
-            return STREAM_CODEC;
-        }
+        private Serializer() {}
     }
 }

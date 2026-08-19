@@ -12,7 +12,6 @@
       "translate": "advancement.create_enchantment_industry.copiable_masterpiece.desc"
     },
     "icon": {
-      "count": 1,
       "id": "minecraft:written_book"
     },
     "title": {

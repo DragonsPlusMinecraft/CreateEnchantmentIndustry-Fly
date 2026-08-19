@@ -35,7 +35,7 @@ import com.zurrtum.create.foundation.fluid.FluidStackIngredient;
 import com.zurrtum.create.infrastructure.fluids.FluidStack;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
+import net.fabricmc.fabric.api.datagen.v1.FabricPackOutput;
 import net.fabricmc.fabric.api.datagen.v1.provider.FabricRecipeProvider;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponentPatch;
@@ -48,6 +48,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.Recipe;
@@ -62,10 +63,10 @@ import plus.dragons.createenchantmentindustry.common.registry.CEIFluids;
 import plus.dragons.createenchantmentindustry.common.registry.CEIItems;
 import plus.dragons.createenchantmentindustry.util.CEIFluidUnits;
 
-/** Generates the core-only recipe set through the live 1.21.11 recipe codecs. */
+/** Generates the core-only recipe set through the live 26.1.2 recipe codecs. */
 public final class CEIRecipeProvider extends FabricRecipeProvider {
     public CEIRecipeProvider(
-            FabricDataOutput output, CompletableFuture<HolderLookup.Provider> registriesFuture) {
+            FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registriesFuture) {
         super(output, registriesFuture);
     }
 
@@ -194,7 +195,7 @@ public final class CEIRecipeProvider extends FabricRecipeProvider {
             save(
                     "filling/experience_cake",
                     new FillingRecipe(
-                            CEIItems.EXPERIENCE_CAKE.get().getDefaultInstance(),
+                            new ItemStackTemplate(CEIItems.EXPERIENCE_CAKE.get()),
                             Ingredient.of(CEIItems.EXPERIENCE_CAKE_BASE.get()),
                             experienceIngredient(1000)));
             save(
@@ -215,13 +216,13 @@ public final class CEIRecipeProvider extends FabricRecipeProvider {
             save(
                     "filling/experience_bottle",
                     new FillingRecipe(
-                            Items.EXPERIENCE_BOTTLE.getDefaultInstance(),
+                            new ItemStackTemplate(Items.EXPERIENCE_BOTTLE),
                             Ingredient.of(Items.GLASS_BOTTLE),
                             experienceIngredient(10)));
             save(
                     "emptying/experience_bottle",
                     new EmptyingRecipe(
-                            Items.GLASS_BOTTLE.getDefaultInstance(),
+                            new ItemStackTemplate(Items.GLASS_BOTTLE),
                             experienceStack(10),
                             Ingredient.of(Items.EXPERIENCE_BOTTLE)));
 

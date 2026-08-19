@@ -12,7 +12,6 @@
       "translate": "advancement.create_enchantment_industry.sigil_casting.desc"
     },
     "icon": {
-      "count": 1,
       "id": "create_enchantment_industry:enchanting_template"
     },
     "title": {

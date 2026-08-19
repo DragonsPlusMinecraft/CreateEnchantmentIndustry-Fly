@@ -25,7 +25,7 @@ import java.util.Optional;
 import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.gui.builder.IRecipeSlotBuilder;
 import mezz.jei.api.gui.ingredient.IRecipeSlotView;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import plus.dragons.createenchantmentindustry.common.kinetics.grindstone.GrindingRecipe;
 import plus.dragons.createenchantmentindustry.common.registry.CEIBlocks;
 
@@ -42,7 +42,7 @@ public final class AssemblyGrindingCategory
 
     @Override
     public void render(
-            GuiGraphics graphics, int index, int x, int y, Optional<IRecipeSlotView> slot) {
-        graphics.renderItem(CEIBlocks.GRINDSTONE_DRAIN.asStack(), x + 1, y + 23);
+            GuiGraphicsExtractor graphics, int index, int x, int y, Optional<IRecipeSlotView> slot) {
+        graphics.item(CEIBlocks.GRINDSTONE_DRAIN.asStack(), x + 1, y + 23);
     }
 }

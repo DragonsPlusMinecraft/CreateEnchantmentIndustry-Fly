@@ -64,7 +64,7 @@ public class GrindstoneHelper {
         experience += getExperienceFromItem(bottom);
         if (experience > 0) {
             int average = Mth.ceil(experience / 2.0);
-            return average + level.random.nextInt(average);
+            return average + level.getRandom().nextInt(average);
         } else {
             return 0;
         }

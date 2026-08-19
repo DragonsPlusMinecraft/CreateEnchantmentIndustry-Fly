@@ -126,7 +126,7 @@ public class MechanicalGrindstoneBlock extends RotatedPillarKineticBlock impleme
             var fake = player instanceof FakePlayer;
             if (!fake && player.getCooldowns().isOnCooldown(stack))
                 return InteractionResult.PASS;
-            var polished = polishing.get().value().assemble(polishingInput, level.registryAccess());
+            var polished = polishing.get().value().assemble(polishingInput);
             if (!fake)
                 player.getCooldowns().addCooldown(stack, 10);
             SandPaperItem.spawnParticles(location, stack, level);

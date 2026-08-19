@@ -26,7 +26,7 @@ import java.util.Optional;
 import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.gui.builder.IRecipeSlotBuilder;
 import mezz.jei.api.gui.ingredient.IRecipeSlotView;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import plus.dragons.createenchantmentindustry.common.fluids.printer.PrintingRecipe;
 import plus.dragons.createenchantmentindustry.common.registry.CEIBlocks;
 
@@ -45,7 +45,7 @@ public final class AssemblyPrintingCategory
 
     @Override
     public void render(
-            GuiGraphics graphics, int index, int x, int y, Optional<IRecipeSlotView> slot) {
-        graphics.renderItem(CEIBlocks.PRINTER.asStack(), x + 1, y + 23);
+            GuiGraphicsExtractor graphics, int index, int x, int y, Optional<IRecipeSlotView> slot) {
+        graphics.item(CEIBlocks.PRINTER.asStack(), x + 1, y + 23);
     }
 }

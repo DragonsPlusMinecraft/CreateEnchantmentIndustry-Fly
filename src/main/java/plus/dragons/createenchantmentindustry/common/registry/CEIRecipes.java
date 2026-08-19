@@ -54,8 +54,8 @@ public final class CEIRecipes {
         registered = true;
         printingType = registerType(PRINTING.getId());
         grindingType = registerType(GRINDING.getId());
-        printingSerializer = registerSerializer(PRINTING.getId(), new PrintingRecipe.Serializer());
-        grindingSerializer = registerSerializer(GRINDING.getId(), new GrindingRecipe.Serializer());
+        printingSerializer = registerSerializer(PRINTING.getId(), PrintingRecipe.Serializer.INSTANCE);
+        grindingSerializer = registerSerializer(GRINDING.getId(), GrindingRecipe.Serializer.INSTANCE);
         RecipeSynchronization.synchronizeRecipeSerializer(printingSerializer);
         RecipeSynchronization.synchronizeRecipeSerializer(grindingSerializer);
     }

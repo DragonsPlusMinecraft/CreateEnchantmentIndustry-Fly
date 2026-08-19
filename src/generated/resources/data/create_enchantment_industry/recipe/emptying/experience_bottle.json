@@ -6,7 +6,6 @@
   },
   "ingredient": "minecraft:experience_bottle",
   "result": {
-    "count": 1,
     "id": "minecraft:glass_bottle"
   }
 }

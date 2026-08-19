@@ -12,7 +12,6 @@
       "translate": "advancement.create_enchantment_industry.copiable_mystery.desc"
     },
     "icon": {
-      "count": 1,
       "id": "minecraft:enchanted_book"
     },
     "title": {

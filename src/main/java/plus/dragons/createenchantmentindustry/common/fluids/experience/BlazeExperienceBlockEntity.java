@@ -195,8 +195,8 @@ public abstract class BlazeExperienceBlockEntity extends BlazeBlockEntity {
                     worldPosition,
                     SoundEvents.BLAZE_AMBIENT,
                     SoundSource.BLOCKS,
-                    .125f + level.random.nextFloat() * .125f,
-                    1.15f - level.random.nextFloat() * .25f);
+                    .125f + level.getRandom().nextFloat() * .125f,
+                    1.15f - level.getRandom().nextFloat() * .25f);
         }
         notifyUpdate();
         return true;

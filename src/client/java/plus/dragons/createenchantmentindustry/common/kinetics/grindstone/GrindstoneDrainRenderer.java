@@ -19,7 +19,6 @@
 package plus.dragons.createenchantmentindustry.common.kinetics.grindstone;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import com.zurrtum.create.client.catnip.render.FluidRenderHelper;
 import com.zurrtum.create.client.content.kinetics.base.KineticBlockEntityRenderer;
@@ -30,21 +29,19 @@ import com.zurrtum.create.foundation.blockEntity.behaviour.fluid.SmartFluidTankB
 import com.zurrtum.create.infrastructure.fluids.FluidStack;
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.Direction;
-import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 import plus.dragons.createenchantmentindustry.common.registry.CEIBlocks;
@@ -89,7 +86,7 @@ public final class GrindstoneDrainRenderer extends KineticBlockEntityRenderer<Gr
             submitItems(state, matrices, queue);
         }
         if (state.fluid != null) {
-            queue.submitCustomGeometry(matrices, RenderTypes.translucentMovingBlock(), state.fluid);
+            state.fluid.submit(matrices, queue);
         }
     }
 
@@ -175,14 +172,21 @@ public final class GrindstoneDrainRenderer extends KineticBlockEntityRenderer<Gr
             float min = 2 / 16.0F;
             float max = min + 12 / 16.0F;
             float minY = 5 / 16.0F;
-            state.fluid = new FluidGeometry(
+            state.fluid = FluidRenderHelper.extractFluidRenderState(
+                    null,
+                    null,
+                    Minecraft.getInstance().getModelManager().getFluidStateModelSet(),
                     stack.getFluid(),
                     stack.getComponentChanges(),
                     min,
-                    max,
                     minY,
+                    min,
+                    max,
                     minY + level * (7 / 16.0F),
-                    state.lightCoords);
+                    max,
+                    state.lightCoords,
+                    false,
+                    false);
         }
     }
 
@@ -214,35 +218,8 @@ public final class GrindstoneDrainRenderer extends KineticBlockEntityRenderer<Gr
         private float beltOffset;
         private int outputCount;
         private float itemY;
-        private @Nullable FluidGeometry fluid;
+        private @Nullable FluidRenderHelper.FluidRenderState fluid;
     }
 
     private record DrainItem(ItemStackRenderState state, float xOffset, int nudgeSeed) {}
-
-    private record FluidGeometry(
-            Fluid fluid,
-            DataComponentPatch components,
-            float min,
-            float max,
-            float minY,
-            float maxY,
-            int light) implements SubmitNodeCollector.CustomGeometryRenderer {
-        @Override
-        public void render(PoseStack.Pose pose, VertexConsumer consumer) {
-            FluidRenderHelper.renderFluidBox(
-                    fluid,
-                    components,
-                    min,
-                    minY,
-                    min,
-                    max,
-                    maxY,
-                    max,
-                    consumer,
-                    pose,
-                    light,
-                    false,
-                    false);
-        }
-    }
 }

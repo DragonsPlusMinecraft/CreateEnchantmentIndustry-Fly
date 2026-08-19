@@ -12,7 +12,6 @@
       "translate": "advancement.create_enchantment_industry.brand_registry.desc"
     },
     "icon": {
-      "count": 1,
       "id": "minecraft:name_tag"
     },
     "title": {

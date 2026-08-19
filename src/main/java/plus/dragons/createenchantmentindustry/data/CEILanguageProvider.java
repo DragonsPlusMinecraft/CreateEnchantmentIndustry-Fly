@@ -26,7 +26,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
-import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
+import net.fabricmc.fabric.api.datagen.v1.FabricPackOutput;
 import net.fabricmc.fabric.api.datagen.v1.provider.FabricLanguageProvider;
 import net.minecraft.core.HolderLookup;
 import plus.dragons.createenchantmentindustry.common.registry.CEIAdvancements;
@@ -39,7 +39,7 @@ public final class CEILanguageProvider extends FabricLanguageProvider {
     private static final String PONDER_LANG = "/assets/create_enchantment_industry/lang/builtin/ponder.json";
 
     public CEILanguageProvider(
-            FabricDataOutput output, CompletableFuture<HolderLookup.Provider> registries) {
+            FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries) {
         super(output, "en_us", registries);
     }
 

@@ -1,9 +1,9 @@
 plugins {
-    id 'fabric-loom' version "${loom_version}"
+    id 'net.fabricmc.fabric-loom' version "${loom_version}"
     id 'java-library'
     id 'maven-publish'
     id 'me.modmuss50.mod-publish-plugin' version '2.1.1'
-    id 'com.diffplug.spotless' version '7.0.2'
+    id 'com.diffplug.spotless' version '8.9.0'
     id 'idea'
 }
 
@@ -15,7 +15,7 @@ base {
 }
 
 java {
-    toolchain.languageVersion = JavaLanguageVersion.of(21)
+    toolchain.languageVersion = JavaLanguageVersion.of(java_version as int)
     withSourcesJar()
 }
 
@@ -82,17 +82,15 @@ repositories {
 
 dependencies {
     minecraft "com.mojang:minecraft:${minecraft_version}"
-    mappings loom.officialMojangMappings()
-
-    modImplementation "net.fabricmc:fabric-loader:${loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
-    modImplementation("maven.modrinth:create-fly:${create_fly_version}") { transitive = false }
-    modImplementation("plus.dragons.createdragonsplus:create-dragons-plus-fly-${minecraft_version}:${create_dragons_plus_version}") {
+    implementation "net.fabricmc:fabric-loader:${loader_version}"
+    api "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
+    api("maven.modrinth:create-fly:${create_fly_version}") { transitive = false }
+    api("plus.dragons.createdragonsplus:create-dragons-plus-fly-${minecraft_version}:${create_dragons_plus_version}") {
         transitive = false
     }
 
-    modClientCompileOnly "maven.modrinth:jei:${jei_version}"
-    modClientRuntimeOnly "maven.modrinth:jei:${jei_version}"
+    clientCompileOnly "maven.modrinth:jei:${jei_version}"
+    clientRuntimeOnly "maven.modrinth:jei:${jei_version}"
 
     compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
 }
@@ -101,6 +99,7 @@ processResources {
     def replaceProperties = [
             version                     : project.version,
             minecraft_version           : minecraft_version,
+            java_version                : java_version,
             loader_version              : loader_version,
             fabric_api_version          : fabric_api_version,
             create_version_range        : create_version_range,
@@ -121,7 +120,7 @@ processResources {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
-    options.release = 21
+    options.release = java_version as int
 }
 
 tasks.withType(Jar).configureEach {
@@ -167,8 +166,8 @@ publishing {
 }
 
 publishMods {
-    file = remapJar.archiveFile
-    additionalFiles.from(remapSourcesJar.archiveFile)
+    file = jar.archiveFile
+    additionalFiles.from sourcesJar.archiveFile
     changelog = providers.fileContents(layout.projectDirectory.file('CHANGELOG.md')).asText
     version = mod_version
     type = me.modmuss50.mpp.ReleaseType.of(mod_release_channel)
@@ -180,7 +179,7 @@ publishMods {
         projectId = '688768'
         accessToken = providers.environmentVariable('CURSEFORGE_TOKEN')
         minecraftVersions.add(minecraft_version)
-        javaVersions.add(JavaVersion.VERSION_21)
+        javaVersions.add(JavaVersion.VERSION_25)
         client = true
         server = true
         requires('fabric-api', 'create-fly', 'create-dragons-plus')

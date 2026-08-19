@@ -58,7 +58,7 @@ import plus.dragons.createenchantmentindustry.integration.jei.category.printing.
 import plus.dragons.createenchantmentindustry.integration.jei.category.printing.StandardPrintingRecipeJEI;
 import plus.dragons.createenchantmentindustry.integration.jei.category.printing.WrittenBookPrintingRecipeJEI;
 
-/** Optional JEI 27 plugin. No class in this package is loaded when JEI is absent. */
+/** Optional JEI 29 plugin. No class in this package is loaded when JEI is absent. */
 @JeiPlugin
 public final class CEIJeiPlugin implements IModPlugin {
     private static final Identifier ID = CEICommon.asResource("jei_plugin");

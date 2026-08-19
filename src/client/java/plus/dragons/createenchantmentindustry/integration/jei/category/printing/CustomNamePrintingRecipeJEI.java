@@ -79,7 +79,7 @@ public enum CustomNamePrintingRecipeJEI implements PrintingRecipeJEI {
                 .map(ingredient -> {
                     var variant = ingredient.getFluidVariant();
                     return new FluidStack(
-                            variant.getFluid(), Math.toIntExact(ingredient.getAmount()), variant.getComponents());
+                            variant.getFluid(), Math.toIntExact(ingredient.getAmount()), variant.getComponentsPatch());
                 })
                 .orElse(FluidStack.EMPTY);
         var style = CEIDataMaps.PRINTING_CUSTOM_NAME_STYLE.get(fluidStack.getFluid());

@@ -19,8 +19,8 @@
 package plus.dragons.createenchantmentindustry.data;
 
 import java.util.concurrent.CompletableFuture;
-import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
-import net.fabricmc.fabric.api.datagen.v1.provider.FabricTagProvider;
+import net.fabricmc.fabric.api.datagen.v1.FabricPackOutput;
+import net.fabricmc.fabric.api.datagen.v1.provider.FabricTagsProvider;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
@@ -30,14 +30,14 @@ import net.minecraft.world.item.Item;
 import plus.dragons.createenchantmentindustry.common.registry.CEIBlocks;
 import plus.dragons.createenchantmentindustry.common.registry.CEIItems;
 
-public final class CEIItemTagsProvider extends FabricTagProvider.ItemTagProvider {
+public final class CEIItemTagsProvider extends FabricTagsProvider.ItemTagsProvider {
     private static final TagKey<Item> STORAGE_BLOCKS = tag("c", "storage_blocks");
     private static final TagKey<Item> NUGGETS = tag("c", "nuggets");
     private static final TagKey<Item> BUCKETS = tag("c", "buckets");
     private static final TagKey<Item> UPRIGHT_ON_BELT = tag("create", "upright_on_belt");
 
     public CEIItemTagsProvider(
-            FabricDataOutput output, CompletableFuture<HolderLookup.Provider> registries) {
+            FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries) {
         super(output, registries);
     }
 

@@ -12,7 +12,6 @@
       "translate": "advancement.create_enchantment_industry.spiritual_return.desc"
     },
     "icon": {
-      "count": 1,
       "id": "create:experience_nugget"
     },
     "title": {

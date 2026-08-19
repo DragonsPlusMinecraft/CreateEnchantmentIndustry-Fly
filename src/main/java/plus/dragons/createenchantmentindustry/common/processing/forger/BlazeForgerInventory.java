@@ -24,7 +24,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import net.fabricmc.fabric.api.transfer.v1.item.InventoryStorage;
+import net.fabricmc.fabric.api.transfer.v1.item.ContainerStorage;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
 import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
 import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext;
@@ -48,7 +48,7 @@ import plus.dragons.createenchantmentindustry.config.CEIConfig;
 
 public class BlazeForgerInventory extends ItemStackHandler {
     private final BlazeForgerBlockEntity forger;
-    private final InventoryStorage transferStorage;
+    private final ContainerStorage transferStorage;
     private boolean suppressCallbacks;
     private int cost;
     private BlazeForgerMode operation;
@@ -59,7 +59,7 @@ public class BlazeForgerInventory extends ItemStackHandler {
     public BlazeForgerInventory(BlazeForgerBlockEntity forger) {
         super(6);
         this.forger = forger;
-        this.transferStorage = InventoryStorage.of(this, null);
+        this.transferStorage = ContainerStorage.of(this, null);
         this.operation = BlazeForgerMode.MERGE;
         this.conflicting = false;
         this.overCap = false;
@@ -471,7 +471,8 @@ public class BlazeForgerInventory extends ItemStackHandler {
             int baseLevel = resultEnchantments.getOrDefault(enchantment, 0);
             int additionLevel = entry.getValue();
             int resultLevel = baseLevel == additionLevel ? additionLevel + 1 : Math.max(additionLevel, baseLevel);
-            if (!CEIEnchantmentHelper.canApplyAtEnchantingTable(enchantment, base)) {
+            boolean enchantmentCarrier = base.is(Items.ENCHANTED_BOOK) || base.getItem() instanceof EnchantingTemplateItem;
+            if (!enchantmentCarrier && !CEIEnchantmentHelper.supportsEnchantment(base, enchantment)) {
                 rejected.add(RejectedEnchantment.of(enchantment, additionLevel, RejectionReason.CANNOT_APPLY_TO_ITEM.message(base.getHoverName())));
                 continue;
             }

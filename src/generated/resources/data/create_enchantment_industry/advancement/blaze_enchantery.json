@@ -19,7 +19,6 @@
       "translate": "advancement.create_enchantment_industry.blaze_enchantery.desc"
     },
     "icon": {
-      "count": 1,
       "id": "create_enchantment_industry:blaze_enchanter"
     },
     "title": {

@@ -98,7 +98,7 @@ public class EnchanterBehaviour extends ServerScrollValueBehaviour {
         if (stack.isEmpty()) {
             template = ItemStack.EMPTY;
             enchanting = new EnchantingBehaviour();
-        } else if (stack.getItem() instanceof EnchantingTemplateItem) {
+        } else if (stack.isEnchantable()) {
             template = stack;
             enchanting = new TemplateEnchantingBehaviour(template);
         } else return false;
@@ -138,7 +138,7 @@ public class EnchanterBehaviour extends ServerScrollValueBehaviour {
         ItemStack template = stack.copy();
         template.setCount(1);
         if (!setTemplate(template)) {
-            player.displayClientMessage(CEILang.translate("gui.blaze_enchanter.template.invalid").component(), true);
+            player.sendOverlayMessage(CEILang.translate("gui.blaze_enchanter.template.invalid").component());
             AllSoundEvents.DENY.playOnServer(player.level(), player.blockPosition(), 1, 1);
             return;
         }

@@ -19,7 +19,7 @@
 package plus.dragons.createenchantmentindustry.data;
 
 import java.util.concurrent.CompletableFuture;
-import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
+import net.fabricmc.fabric.api.datagen.v1.FabricPackOutput;
 import net.fabricmc.fabric.api.datagen.v1.provider.FabricDynamicRegistryProvider;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.RegistrySetBuilder;
@@ -27,7 +27,7 @@ import net.minecraft.core.registries.Registries;
 import plus.dragons.createenchantmentindustry.common.registry.CEIDamageTypes;
 
 public class CEIGenerateEntriesProvider extends FabricDynamicRegistryProvider {
-    public CEIGenerateEntriesProvider(FabricDataOutput output, CompletableFuture<HolderLookup.Provider> registries) {
+    public CEIGenerateEntriesProvider(FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries) {
         super(output, registries);
     }
 

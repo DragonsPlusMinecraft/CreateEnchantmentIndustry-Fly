@@ -28,18 +28,19 @@ import com.zurrtum.create.client.foundation.blockEntity.behaviour.filtering.Filt
 import com.zurrtum.create.client.foundation.blockEntity.behaviour.filtering.FilteringRenderer.FilterRenderState;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.object.book.BookModel;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 import plus.dragons.createdragonsplus.common.processing.blaze.BlazeBlockRenderState;
@@ -72,16 +73,17 @@ public final class ClassicBlazeEnchanterRenderer
             Vec3 cameraPos,
             @Nullable ModelFeatureRenderer.CrumblingOverlay crumblingOverlay) {
         ClassicRenderState state = (ClassicRenderState) baseState;
+        state.machineState = blockEntity.getBlockState();
         double distance = blockEntity.isVirtual()
                 ? -1
                 : cameraPos.distanceToSqr(VecHelper.getCenterOf(state.blockPos));
         state.filter = FilteringRenderer.getFilterRenderState(
-                blockEntity, state.blockState, itemModelResolver, distance);
+                blockEntity, state.machineState, itemModelResolver, distance);
         float time = AnimationTickHolder.getRenderTime(blockEntity.getLevel());
         float flip = Mth.lerp(tickProgress, blockEntity.oFlip, blockEntity.flip);
         float page0 = Mth.clamp(Mth.frac(flip + 0.25F) * 1.6F - 0.3F, 0.0F, 1.0F);
         float page1 = Mth.clamp(Mth.frac(flip + 0.75F) * 1.6F - 0.3F, 0.0F, 1.0F);
-        state.book = new BookGeometry(bookModel, new BookModel.State(time, page0, page1, 1.0F));
+        state.book = new BookGeometry(bookModel, new BookModel.State(time, page0, page1));
         state.bookBob = 0.1F + Mth.sin(time * 0.1F) * 0.01F;
         state.bookAngle = AngleHelper.rad(blockEntity.headAngle.getValue(tickProgress));
         state.item = null;
@@ -114,7 +116,7 @@ public final class ClassicBlazeEnchanterRenderer
             CameraRenderState cameraState) {
         ClassicRenderState state = (ClassicRenderState) baseState;
         if (state.filter != null) {
-            state.filter.render(state.blockState, queue, matrices, state.lightCoords);
+            state.filter.submit(state.machineState, queue, matrices, state.lightCoords);
         }
         if (state.book != null) {
             matrices.pushPose();
@@ -142,6 +144,7 @@ public final class ClassicBlazeEnchanterRenderer
     }
 
     public static final class ClassicRenderState extends BlazeBlockRenderState {
+        private BlockState machineState;
         private @Nullable FilterRenderState filter;
         private @Nullable BookGeometry book;
         private float bookBob;
@@ -163,7 +166,7 @@ public final class ClassicBlazeEnchanterRenderer
             model.renderToBuffer(
                     matrices,
                     consumer,
-                    LightTexture.FULL_BRIGHT,
+                    LightCoordsUtil.FULL_BRIGHT,
                     OverlayTexture.NO_OVERLAY);
         }
     }

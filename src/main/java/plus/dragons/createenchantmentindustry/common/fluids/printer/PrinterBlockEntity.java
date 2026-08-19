@@ -218,7 +218,7 @@ public class PrinterBlockEntity extends SmartBlockEntity {
                 requiredFluid);
         processingTicks = PROCESSING_TIME;
         notifyUpdate();
-        AllSoundEvents.SPOUTING.playOnServer(level, worldPosition, 0.75f, 0.9f + 0.2f * level.random.nextFloat());
+        AllSoundEvents.SPOUTING.playOnServer(level, worldPosition, 0.75f, 0.9f + 0.2f * level.getRandom().nextFloat());
         return HOLD;
     }
 

@@ -19,8 +19,8 @@
 package plus.dragons.createenchantmentindustry.data;
 
 import java.util.concurrent.CompletableFuture;
-import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
-import net.fabricmc.fabric.api.datagen.v1.provider.FabricTagProvider;
+import net.fabricmc.fabric.api.datagen.v1.FabricPackOutput;
+import net.fabricmc.fabric.api.datagen.v1.provider.FabricTagsProvider;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
@@ -30,13 +30,13 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.block.Block;
 import plus.dragons.createenchantmentindustry.common.registry.CEIBlocks;
 
-public final class CEIBlockTagsProvider extends FabricTagProvider.BlockTagProvider {
+public final class CEIBlockTagsProvider extends FabricTagsProvider.BlockTagsProvider {
     private static final TagKey<Block> STORAGE_BLOCKS = tag("c", "storage_blocks");
     private static final TagKey<Block> FAN_TRANSPARENT = tag("create", "fan_transparent");
     private static final TagKey<Block> SMOKING_CATALYSTS = tag("create", "fan_processing_catalysts/smoking");
 
     public CEIBlockTagsProvider(
-            FabricDataOutput output, CompletableFuture<HolderLookup.Provider> registries) {
+            FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries) {
         super(output, registries);
     }
 

@@ -32,7 +32,7 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -68,6 +68,7 @@ public final class BlazeEnchanterRenderer extends BlazeBlockRenderer<BlazeEnchan
             Vec3 cameraPos,
             @Nullable ModelFeatureRenderer.CrumblingOverlay crumblingOverlay) {
         EnchanterRenderState state = (EnchanterRenderState) baseState;
+        state.machineState = blockEntity.getBlockState();
         extractTemplateRenderState(blockEntity, state, cameraPos);
         state.item = null;
         if (blockEntity.heldItem.isEmpty() || blockEntity.getLevel() == null) {
@@ -111,7 +112,7 @@ public final class BlazeEnchanterRenderer extends BlazeBlockRenderer<BlazeEnchan
         if (!transform.testHit(
                 blockEntity.getLevel(),
                 blockEntity.getBlockPos(),
-                state.blockState,
+                state.machineState,
                 localHit)) {
             return;
         }
@@ -143,7 +144,7 @@ public final class BlazeEnchanterRenderer extends BlazeBlockRenderer<BlazeEnchan
             TemplateItemSlot transform = new TemplateItemSlot();
             transform.fromSide(state.templateSide);
             matrices.pushPose();
-            transform.transform(state.blockState, matrices);
+            transform.transform(state.machineState, matrices);
             ValueBoxRenderer.renderItemIntoValueBox(
                     state.template, queue, matrices, state.lightCoords, 0);
             matrices.popPose();
@@ -160,6 +161,7 @@ public final class BlazeEnchanterRenderer extends BlazeBlockRenderer<BlazeEnchan
     }
 
     public static final class EnchanterRenderState extends BlazeBlockRenderState {
+        private BlockState machineState;
         private @Nullable ItemStackRenderState template;
         private @Nullable Direction templateSide;
         private @Nullable ItemStackRenderState item;

@@ -253,7 +253,7 @@ public class ClassicBlazeEnchanterBlockEntity extends BlazeExperienceBlockEntity
         advancement.awardStat(CEIStats.CLASSIC_ENCHANT.get(), 1);
         finishProcessing();
         notifyUpdate();
-        level.playSound(null, worldPosition, SoundEvents.ENCHANTMENT_TABLE_USE, SoundSource.BLOCKS, 1.0F, level.random.nextFloat() * 0.1F + 0.9F);
+        level.playSound(null, worldPosition, SoundEvents.ENCHANTMENT_TABLE_USE, SoundSource.BLOCKS, 1.0F, level.getRandom().nextFloat() * 0.1F + 0.9F);
         spawnEnchantParticles();
     }
 
@@ -345,10 +345,10 @@ public class ClassicBlazeEnchanterBlockEntity extends BlazeExperienceBlockEntity
     }
 
     protected void bookTick() {
-        if (level.random.nextInt(40) == 0) {
+        if (level.getRandom().nextInt(40) == 0) {
             float oFlipT = flipT;
             while (oFlipT == flipT) {
-                flipT += (level.random.nextInt(4) - level.random.nextInt(4));
+                flipT += (level.getRandom().nextInt(4) - level.getRandom().nextInt(4));
             }
         }
         oFlip = flip;
@@ -365,11 +365,11 @@ public class ClassicBlazeEnchanterBlockEntity extends BlazeExperienceBlockEntity
         vec = vec.add(0, 1, 0);
         ParticleOptions particle = ParticleTypes.ENCHANT;
         for (int i = 0; i < 20; i++) {
-            Vec3 m = VecHelper.offsetRandomly(Vec3.ZERO, level.random, 1f);
+            Vec3 m = VecHelper.offsetRandomly(Vec3.ZERO, level.getRandom(), 1f);
             m = new Vec3(m.x, Math.abs(m.y), m.z);
             level.addAlwaysVisibleParticle(particle, vec.x, vec.y, vec.z, m.x, m.y, m.z);
         }
-        level.playLocalSound(vec.x, vec.y, vec.z, SoundEvents.ENCHANTMENT_TABLE_USE, SoundSource.BLOCKS, 1f, level.random.nextFloat() * .1f + .9f, true);
+        level.playLocalSound(vec.x, vec.y, vec.z, SoundEvents.ENCHANTMENT_TABLE_USE, SoundSource.BLOCKS, 1f, level.getRandom().nextFloat() * .1f + .9f, true);
     }
 
     public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {

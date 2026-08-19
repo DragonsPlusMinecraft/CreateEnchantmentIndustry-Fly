@@ -39,7 +39,7 @@ public class ExperienceEffectHandler implements OpenPipeEffectHandler {
         if (players.isEmpty()) {
             ExperienceOrb.award(serverLevel, area.getCenter(), ExperienceHelper.getExperienceFromFluid(contained));
         } else {
-            ServerPlayer player = players.get(level.random.nextInt(players.size()));
+            ServerPlayer player = players.get(level.getRandom().nextInt(players.size()));
             ExperienceHelper.award(ExperienceHelper.getExperienceFromFluid(contained), player);
             CEIAdvancements.A_SHOWER_EXPERIENCE.awardTo(player);
         }

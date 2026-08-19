@@ -19,11 +19,10 @@
 package plus.dragons.createenchantmentindustry.client;
 
 import com.zurrtum.create.client.AllFluidConfigs;
-import com.zurrtum.create.client.infrastructure.fluid.FluidConfig;
-import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderHandlerRegistry;
-import net.fabricmc.fabric.api.client.render.fluid.v1.SimpleFluidRenderHandler;
-import net.fabricmc.fabric.api.client.rendering.v1.BlockRenderLayerMap;
-import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
+import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderingRegistry;
+import net.minecraft.client.color.block.BlockTintSource;
+import net.minecraft.client.renderer.block.FluidModel;
+import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.material.Fluid;
 import plus.dragons.createenchantmentindustry.common.CEICommon;
@@ -40,16 +39,18 @@ public final class CEIFluidRenderers {
     public static void register() {
         Fluid source = CEIFluids.EXPERIENCE.getSource();
         Fluid flowing = CEIFluids.EXPERIENCE.getFlowing();
-        SimpleFluidRenderHandler handler = new SimpleFluidRenderHandler(STILL, FLOW, 0xFF000000 | COLOR);
-        FluidRenderHandlerRegistry.INSTANCE.register(source, flowing, handler);
-        BlockRenderLayerMap.putFluids(ChunkSectionLayer.TRANSLUCENT, source, flowing);
-        FluidConfig config = new FluidConfig(
-                () -> handler.getFluidSprites(null, null, source.defaultFluidState())[0],
-                () -> handler.getFluidSprites(null, null, source.defaultFluidState())[1],
-                components -> 0xFF000000 | COLOR,
-                () -> 96.0F / 256.0F,
-                COLOR);
-        AllFluidConfigs.ALL.put(source, config);
-        AllFluidConfigs.ALL.put(flowing, config);
+        BlockTintSource tint = state -> 0xFF000000 | COLOR;
+        FluidModel.Unbaked model = new FluidModel.Unbaked(
+                new Material(STILL, true),
+                new Material(FLOW, true),
+                null,
+                tint);
+        FluidRenderingRegistry.register(source, flowing, model);
+        AllFluidConfigs.FOG_COLOR.put(source, COLOR);
+        AllFluidConfigs.FOG_COLOR.put(flowing, COLOR);
+        AllFluidConfigs.FOG_DISTANCE.put(source, () -> 96.0F / 256.0F);
+        AllFluidConfigs.FOG_DISTANCE.put(flowing, () -> 96.0F / 256.0F);
+        AllFluidConfigs.TINT.put(source, (fluid, components) -> 0xFF000000 | COLOR);
+        AllFluidConfigs.TINT.put(flowing, (fluid, components) -> 0xFF000000 | COLOR);
     }
 }

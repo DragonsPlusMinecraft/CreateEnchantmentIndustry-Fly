@@ -19,7 +19,6 @@
       "translate": "advancement.create_enchantment_industry.legacy_ignition.desc"
     },
     "icon": {
-      "count": 1,
       "id": "create_enchantment_industry:classic_blaze_enchanter"
     },
     "title": {

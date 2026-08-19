@@ -61,7 +61,7 @@ public class PrinterBehaviour extends ServerFilteringBehaviour {
         var result = PrintingBehaviour.create(blockEntity.getLevel(), tank, stack)
                 .resultOrPartial(message -> {
                     if (player != null)
-                        player.displayClientMessage(Component.translatable(message), true);
+                        player.sendOverlayMessage(Component.translatable(message));
                 });
         if (result.isPresent() && super.setFilter(stack)) {
             printing = result.get();

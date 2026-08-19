@@ -114,7 +114,7 @@ public record PrintingRecipe(
     }
 
     public void playSound(Level level, BlockPos pos, SoundSource source) {
-        float pitch = minimumPitch + level.random.nextFloat() * (maximumPitch - minimumPitch);
+        float pitch = minimumPitch + level.getRandom().nextFloat() * (maximumPitch - minimumPitch);
         level.playSound(null, pos, sound, source, volume, pitch);
     }
 
@@ -204,7 +204,7 @@ public record PrintingRecipe(
         }
     }
 
-    public static final class Serializer implements RecipeSerializer<PrintingRecipe> {
+    public static final class Serializer {
         private static final StreamCodec<RegistryFriendlyByteBuf, List<Ingredient>> INGREDIENTS_STREAM_CODEC = Ingredient.CONTENTS_STREAM_CODEC.apply(ByteBufCodecs.list());
         private static final StreamCodec<RegistryFriendlyByteBuf, List<FluidIngredient>> FLUIDS_STREAM_CODEC = FluidIngredient.PACKET_CODEC.apply(ByteBufCodecs.list());
         private static final StreamCodec<RegistryFriendlyByteBuf, List<ProcessingOutput>> RESULTS_STREAM_CODEC = ProcessingOutput.STREAM_CODEC.apply(ByteBufCodecs.list());
@@ -245,15 +245,8 @@ public record PrintingRecipe(
                 ByteBufCodecs.FLOAT.encode(buffer, recipe.maximumPitch());
             }
         };
+        public static final RecipeSerializer<PrintingRecipe> INSTANCE = new RecipeSerializer<>(CODEC, STREAM_CODEC);
 
-        @Override
-        public MapCodec<PrintingRecipe> codec() {
-            return CODEC;
-        }
-
-        @Override
-        public StreamCodec<RegistryFriendlyByteBuf, PrintingRecipe> streamCodec() {
-            return STREAM_CODEC;
-        }
+        private Serializer() {}
     }
 }

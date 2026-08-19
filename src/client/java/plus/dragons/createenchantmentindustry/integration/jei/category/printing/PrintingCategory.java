@@ -28,7 +28,7 @@ import mezz.jei.api.gui.ingredient.IRecipeSlotDrawable;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.types.IRecipeType;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.NotNull;
@@ -95,7 +95,7 @@ public final class PrintingCategory extends CreateCategory<PrintingRecipeJEI> {
     public void draw(
             PrintingRecipeJEI recipe,
             IRecipeSlotsView recipeSlotsView,
-            GuiGraphics graphics,
+            GuiGraphicsExtractor graphics,
             double mouseX,
             double mouseY) {
         AllGuiTextures.JEI_DOWN_ARROW.render(graphics, 47, 27);

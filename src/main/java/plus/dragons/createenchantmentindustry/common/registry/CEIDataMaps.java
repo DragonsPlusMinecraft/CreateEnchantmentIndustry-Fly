@@ -66,7 +66,7 @@ import plus.dragons.createenchantmentindustry.common.processing.EnchantmentProce
 import plus.dragons.createenchantmentindustry.util.CEIFluidUnits;
 import plus.dragons.createenchantmentindustry.util.CEIIntIntPair;
 
-/** Resource-pack driven CEI data-map service for Fabric 1.21.11. */
+/** Resource-pack driven CEI data-map service for Fabric 26.1.2. */
 public final class CEIDataMaps {
     private static final Logger LOGGER = LoggerFactory.getLogger(CEIDataMaps.class);
     private static final Gson GSON = new Gson();

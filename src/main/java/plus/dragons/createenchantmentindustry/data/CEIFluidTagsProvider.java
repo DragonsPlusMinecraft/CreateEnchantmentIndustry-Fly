@@ -19,8 +19,8 @@
 package plus.dragons.createenchantmentindustry.data;
 
 import java.util.concurrent.CompletableFuture;
-import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
-import net.fabricmc.fabric.api.datagen.v1.provider.FabricTagProvider;
+import net.fabricmc.fabric.api.datagen.v1.FabricPackOutput;
+import net.fabricmc.fabric.api.datagen.v1.provider.FabricTagsProvider;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
@@ -29,11 +29,11 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.material.Fluid;
 import plus.dragons.createenchantmentindustry.common.CEICommon;
 
-public final class CEIFluidTagsProvider extends FabricTagProvider.FluidTagProvider {
+public final class CEIFluidTagsProvider extends FabricTagsProvider.FluidTagsProvider {
     private static final TagKey<Fluid> BOTTOMLESS_DENY = TagKey.create(Registries.FLUID, Identifier.fromNamespaceAndPath("create", "bottomless/deny"));
 
     public CEIFluidTagsProvider(
-            FabricDataOutput output, CompletableFuture<HolderLookup.Provider> registries) {
+            FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries) {
         super(output, registries);
     }
 

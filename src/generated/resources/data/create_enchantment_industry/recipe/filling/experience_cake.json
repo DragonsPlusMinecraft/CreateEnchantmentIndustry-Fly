@@ -6,7 +6,6 @@
   },
   "ingredient": "create_enchantment_industry:experience_cake_base",
   "result": {
-    "count": 1,
     "id": "create_enchantment_industry:experience_cake"
   }
 }

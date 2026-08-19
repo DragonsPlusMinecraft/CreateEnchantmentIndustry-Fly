@@ -1,5 +1,2 @@
 # Create: Enchantment Industry Fly 2.5.1
-
-## Fixed
-
-- Restored Create Fly client interaction slots for the Blaze Enchanter, Blaze Forger, Experience Hatch, Printer and Classic Blaze Enchanter.
+Updated to Minecraft 26.1.2, Fabric Loader 0.19.3, Fabric API 0.155.2+26.1.2, Create Fly 26.1.2-6.0.9-4

@@ -25,7 +25,6 @@
     "create_enchantment_industry:experience_bucket": {
       "experience": 1000,
       "using_convert_to": {
-        "count": 1,
         "id": "minecraft:bucket"
       }
     },

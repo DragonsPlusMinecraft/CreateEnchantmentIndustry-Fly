@@ -43,8 +43,8 @@ public final class CEINetwork {
     private CEINetwork() {}
 
     public static void register() {
-        PayloadTypeRegistry.playS2C().registerLarge(DATA_MAP_SYNC_TYPE, DATA_MAP_SYNC_CODEC, 16 * 1024 * 1024);
-        PayloadTypeRegistry.playS2C().register(CONFIG_SYNC_TYPE, CONFIG_SYNC_CODEC);
+        PayloadTypeRegistry.clientboundPlay().registerLarge(DATA_MAP_SYNC_TYPE, DATA_MAP_SYNC_CODEC, 16 * 1024 * 1024);
+        PayloadTypeRegistry.clientboundPlay().register(CONFIG_SYNC_TYPE, CONFIG_SYNC_CODEC);
     }
 
     public static void sendStateSnapshot(ServerPlayer player) {

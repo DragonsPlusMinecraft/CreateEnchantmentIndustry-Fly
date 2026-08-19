@@ -60,7 +60,7 @@ public class EnchantingBehaviour {
                 : registry.listElements().map(holder -> holder);
         Stream<Holder<Enchantment>> possible = holders
                 .filter(holder -> !special || !holder.is(CEIEnchantments.MOD_TAGS.enchantingExclusive))
-                .filter(enchantment -> CEIEnchantmentHelper.canApplyAtEnchantingTable(enchantment, stack));
+                .filter(enchantment -> CEIEnchantmentHelper.isPrimaryItemFor(stack, enchantment));
         return CEIEnchantmentHelper.getAvailableEnchantmentResults(adjustedLevel, possible, special);
     }
 
@@ -77,7 +77,8 @@ public class EnchantingBehaviour {
         var possible = holders
                 .filter(enchantment -> !enchantment.is(CEIEnchantments.MOD_TAGS.penaltyCursesDeny))
                 .filter(enchantment -> enchantment.is(EnchantmentTags.CURSE))
-                .filter(enchantment -> CEIEnchantmentHelper.canApplyAtEnchantingTable(enchantment, stack));
+                .filter(enchantment -> stack.is(Items.BOOK)
+                        || CEIEnchantmentHelper.supportsEnchantment(stack, enchantment));
         return CEIEnchantmentHelper.getAvailablePenaltyCurseResults(
                 possible,
                 CEIConfig.enchantments().blazeEnchanterBlockedLightningCurseMaxLevel.get());

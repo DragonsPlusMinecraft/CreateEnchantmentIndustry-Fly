@@ -202,7 +202,7 @@ public class BlazeForgerBlockEntity extends BlazeExperienceBlockEntity implement
                 active.special());
         finishProcessing();
         notifyUpdate();
-        level.playSound(null, worldPosition, SoundEvents.ANVIL_USE, SoundSource.BLOCKS, 1.0F, level.random.nextFloat() * 0.1F + 0.9F);
+        level.playSound(null, worldPosition, SoundEvents.ANVIL_USE, SoundSource.BLOCKS, 1.0F, level.getRandom().nextFloat() * 0.1F + 0.9F);
     }
 
     private void tickVirtual() {

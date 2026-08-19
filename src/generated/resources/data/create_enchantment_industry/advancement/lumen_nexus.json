@@ -19,7 +19,6 @@
       "translate": "advancement.create_enchantment_industry.lumen_nexus.desc"
     },
     "icon": {
-      "count": 1,
       "id": "create_enchantment_industry:experience_lantern"
     },
     "title": {

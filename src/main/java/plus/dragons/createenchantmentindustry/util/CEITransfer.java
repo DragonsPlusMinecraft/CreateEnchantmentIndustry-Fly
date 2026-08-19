@@ -151,6 +151,6 @@ public final class CEITransfer {
     public static FluidStack stackOf(FluidVariant variant, long amount) {
         if (variant == null || variant.isBlank() || amount <= 0)
             return FluidStack.EMPTY;
-        return new FluidStack(variant.getFluid(), Math.toIntExact(amount), variant.getComponents());
+        return new FluidStack(variant.getFluid(), Math.toIntExact(amount), variant.getComponentsPatch());
     }
 }

@@ -12,7 +12,6 @@
       "translate": "advancement.create_enchantment_industry.blazing_enchantment.desc"
     },
     "icon": {
-      "count": 1,
       "id": "minecraft:golden_helmet"
     },
     "title": {

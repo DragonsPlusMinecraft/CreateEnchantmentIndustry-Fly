@@ -28,7 +28,7 @@ import mezz.jei.api.gui.drawable.IDrawable;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.types.IRecipeHolderType;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import org.jetbrains.annotations.NotNull;
@@ -37,7 +37,7 @@ import plus.dragons.createenchantmentindustry.common.registry.CEIBlocks;
 import plus.dragons.createenchantmentindustry.common.registry.CEIRecipes;
 import plus.dragons.createenchantmentindustry.util.CEILang;
 
-/** JEI 27 category backed directly by synced {@link RecipeHolder}s. */
+/** JEI 29 category backed directly by synced {@link RecipeHolder}s. */
 public final class GrindingCategory extends CreateCategory<RecipeHolder<GrindingRecipe>> {
     public static final IRecipeHolderType<GrindingRecipe> TYPE = IRecipeHolderType.create(CEIRecipes.GRINDING.getType());
 
@@ -90,7 +90,7 @@ public final class GrindingCategory extends CreateCategory<RecipeHolder<Grinding
     public void draw(
             RecipeHolder<GrindingRecipe> entry,
             IRecipeSlotsView recipeSlotsView,
-            GuiGraphics graphics,
+            GuiGraphicsExtractor graphics,
             double mouseX,
             double mouseY) {
         AllGuiTextures.JEI_DOWN_ARROW.render(graphics, 115, 5);

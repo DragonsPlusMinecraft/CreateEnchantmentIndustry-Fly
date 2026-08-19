@@ -26,9 +26,7 @@ import com.zurrtum.create.client.foundation.blockEntity.renderer.SmartBlockEntit
 import com.zurrtum.create.client.ponder.foundation.PonderIndex;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.BlockRenderLayerMap;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
-import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
 import plus.dragons.createdragonsplus.client.processing.blaze.BlazeRenderModelProvider;
 import plus.dragons.createdragonsplus.client.processing.blaze.BlazeRenderModels;
 import plus.dragons.createdragonsplus.common.processing.blaze.BlazeBlockVisual;
@@ -58,7 +56,6 @@ public final class CEIClient implements ClientModInitializer {
         CEIPartialModels.register();
         CEIFluidRenderers.register();
         CEIClientBehaviours.register();
-        registerRenderLayers();
         registerBlazeModelsAndMovement();
         CEITooltipBehaviours.register();
         registerBlockEntityRenderers();
@@ -67,15 +64,6 @@ public final class CEIClient implements ClientModInitializer {
             CEIDataMaps.clearClientSnapshot();
             CEIConfig.clearServerSnapshot();
         });
-    }
-
-    private static void registerRenderLayers() {
-        BlockRenderLayerMap.putBlocks(
-                ChunkSectionLayer.CUTOUT,
-                CEIBlocks.BLAZE_ENCHANTER.get(),
-                CEIBlocks.CLASSIC_BLAZE_ENCHANTER.get(),
-                CEIBlocks.BLAZE_FORGER.get(),
-                CEIBlocks.EXPERIENCE_LANTERN.get());
     }
 
     private static void registerBlazeModelsAndMovement() {

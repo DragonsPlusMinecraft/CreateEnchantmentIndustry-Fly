@@ -28,6 +28,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -91,9 +92,13 @@ public abstract class BlazeExperienceBlock<T extends BlazeExperienceBlockEntity>
             if (applied) {
                 if (!notConsume)
                     stack.shrink(1);
-                ItemStack remainder = notConsume
-                        ? ItemStack.EMPTY
-                        : fuel.usingConvertTo().orElseGet(stack.getItem()::getCraftingRemainder).copy();
+                ItemStack remainder = ItemStack.EMPTY;
+                if (!notConsume) {
+                    remainder = fuel.usingConvertTo().map(ItemStackTemplate::create).orElseGet(() -> {
+                        var template = stack.getItem().getCraftingRemainder();
+                        return template == null ? ItemStack.EMPTY : template.create();
+                    });
+                }
                 return FuelApplication.success(remainder);
             }
             return FuelApplication.fail();

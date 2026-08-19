@@ -38,6 +38,7 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantments;
 import plus.dragons.createenchantmentindustry.common.datamap.CEIDataMapType;
@@ -64,7 +65,7 @@ public class CEIDataMapProvider implements DataProvider {
         var experienceFuel = builder(CEIDataMaps.EXPERIENCE_FUEL);
         experienceFuel.add(
                 id(BuiltInRegistries.ITEM, CEIItems.EXPERIENCE_BUCKET.get()),
-                ExperienceFuel.normal(1000, Items.BUCKET.getDefaultInstance()));
+                ExperienceFuel.normal(1000, new ItemStackTemplate(Items.BUCKET)));
         experienceFuel.add(CEIItems.EXPERIENCE_CAKE.getId(), ExperienceFuel.special(1000));
         experienceFuel.add(CEIItems.EXPERIENCE_CAKE_SLICE.getId(), ExperienceFuel.special(250));
         experienceFuel.add(CEIBlocks.SUPER_EXPERIENCE_BLOCK.getId(), ExperienceFuel.special(27));

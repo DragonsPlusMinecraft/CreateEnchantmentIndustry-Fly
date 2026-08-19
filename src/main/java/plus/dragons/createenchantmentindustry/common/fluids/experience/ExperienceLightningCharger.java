@@ -37,9 +37,9 @@ public class ExperienceLightningCharger {
         chargeBlock(level, pos, false);
 
         BlockPos.MutableBlockPos mutable = pos.mutable();
-        int branches = level.random.nextInt(3) + 3;
+        int branches = level.getRandom().nextInt(3) + 3;
         for (int i = 0; i < branches; i++) {
-            int steps = level.random.nextInt(8) + 1;
+            int steps = level.getRandom().nextInt(8) + 1;
             randomWalkChargeExperience(level, pos, mutable, steps);
         }
     }
@@ -81,7 +81,7 @@ public class ExperienceLightningCharger {
     }
 
     private static Optional<BlockPos> randomWalkChargeExperience(Level level, BlockPos pos) {
-        for (BlockPos blockpos : BlockPos.randomInCube(level.random, 10, pos, 1)) {
+        for (BlockPos blockpos : BlockPos.randomInCube(level.getRandom(), 10, pos, 1)) {
             Optional<BlockPos> chargeable = findChargeableBlock(level, blockpos);
             if (chargeable.isPresent()) {
                 BlockPos target = chargeable.get();

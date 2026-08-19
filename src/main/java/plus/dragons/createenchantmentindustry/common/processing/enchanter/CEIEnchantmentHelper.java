@@ -67,8 +67,28 @@ public class CEIEnchantmentHelper {
         return level;
     }
 
+    /** Compatibility equivalent of the enchanting-table primary-item predicate. */
+    public static boolean isPrimaryItemFor(ItemStack stack, Holder<Enchantment> enchantment) {
+        if (stack.is(Items.BOOK))
+            return true;
+        if (stack.getItem() instanceof EnchantingTemplateItem)
+            return false;
+        return enchantment.value().isPrimaryItem(stack);
+    }
+
+    /** Compatibility equivalent of the general enchantment-support predicate. */
+    public static boolean supportsEnchantment(ItemStack stack, Holder<Enchantment> enchantment) {
+        if (stack.is(Items.ENCHANTED_BOOK))
+            return true;
+        return enchantment.value().canEnchant(stack);
+    }
+
+    /**
+     * Compatibility alias retained for consumers compiled against the initial 1.21.11 Fly port.
+     */
+    @Deprecated(forRemoval = false)
     public static boolean canApplyAtEnchantingTable(Holder<Enchantment> enchantment, ItemStack stack) {
-        return stack.is(Items.BOOK) || enchantment.value().canEnchant(stack);
+        return isPrimaryItemFor(stack, enchantment);
     }
 
     public static List<EnchantmentInstance> getAvailableEnchantmentResults(int level, Stream<Holder<Enchantment>> possibleEnchantments, boolean special) {

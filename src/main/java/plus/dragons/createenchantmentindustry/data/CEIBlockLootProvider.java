@@ -20,8 +20,8 @@ package plus.dragons.createenchantmentindustry.data;
 
 import com.zurrtum.create.AllBlocks;
 import java.util.concurrent.CompletableFuture;
-import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
-import net.fabricmc.fabric.api.datagen.v1.provider.FabricBlockLootTableProvider;
+import net.fabricmc.fabric.api.datagen.v1.FabricPackOutput;
+import net.fabricmc.fabric.api.datagen.v1.provider.FabricBlockLootSubProvider;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.world.level.storage.loot.LootPool;
 import net.minecraft.world.level.storage.loot.LootTable;
@@ -30,9 +30,9 @@ import net.minecraft.world.level.storage.loot.providers.number.ConstantValue;
 import plus.dragons.createenchantmentindustry.common.registry.CEIBlocks;
 
 /** Core-only block drops. */
-public final class CEIBlockLootProvider extends FabricBlockLootTableProvider {
+public final class CEIBlockLootProvider extends FabricBlockLootSubProvider {
     public CEIBlockLootProvider(
-            FabricDataOutput output, CompletableFuture<HolderLookup.Provider> registries) {
+            FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries) {
         super(output, registries);
     }
 
