@@ -1,7 +1,6 @@
 {
   "credit": "By RaymondBlaze, made with Blockbench",
   "parent": "block/block",
-  "render_type": "cutout_mipped",
   "textures": {
     "tank": "create:block/spout",
     "tank_bottom": "create:block/encased_pipe",
