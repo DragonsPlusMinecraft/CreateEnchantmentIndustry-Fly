@@ -64,6 +64,13 @@ public class BlazeForgerArmInteractionPoint extends ArmInteractionPoint {
         }
     }
 
+    @Override
+    public int getSlotCount(ArmBlockEntity armBlockEntity) {
+        if (level.getBlockEntity(pos) instanceof BlazeForgerBlockEntity forger)
+            return forger.getAutomationSlotCount();
+        return 0;
+    }
+
     public static class Type extends ArmInteractionPointType {
         @Override
         public boolean canCreatePoint(Level level, BlockPos pos, BlockState state) {

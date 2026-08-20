@@ -47,6 +47,9 @@ import plus.dragons.createenchantmentindustry.common.registry.CEIStats;
 import plus.dragons.createenchantmentindustry.config.CEIConfig;
 
 public class BlazeForgerInventory extends ItemStackHandler {
+    private static final String INVENTORY_VERSION = "InventoryVersion";
+    private static final int FIXED_SLOT_INVENTORY_VERSION = 1;
+
     private final BlazeForgerBlockEntity forger;
     private final ContainerStorage transferStorage;
     private boolean suppressCallbacks;
@@ -195,8 +198,15 @@ public class BlazeForgerInventory extends ItemStackHandler {
     @Override
     public void read(ValueInput input) {
         suppressCallbacks = true;
-        super.read(input);
-        suppressCallbacks = false;
+        try {
+            if (input.getIntOr(INVENTORY_VERSION, 0) >= FIXED_SLOT_INVENTORY_VERSION) {
+                super.readSlots(input);
+            } else {
+                super.read(input);
+            }
+        } finally {
+            suppressCallbacks = false;
+        }
         cost = input.getIntOr("Cost", 0);
         operation = BlazeForgerMode.BY_ID.apply(input.getIntOr("Operation", 0));
         conflicting = input.getBooleanOr("Conflicting", false);
@@ -206,7 +216,8 @@ public class BlazeForgerInventory extends ItemStackHandler {
 
     @Override
     public void write(ValueOutput output) {
-        super.write(output);
+        super.writeSlots(output);
+        output.putInt(INVENTORY_VERSION, FIXED_SLOT_INVENTORY_VERSION);
         output.putInt("Cost", cost);
         output.putInt("Operation", operation.ordinal());
         output.putBoolean("Conflicting", conflicting);

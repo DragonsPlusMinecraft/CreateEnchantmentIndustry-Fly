@@ -1,4 +1,4 @@
-# Create: Enchantment Industry Fly 2.5.1 — Modpack Notes
+# Create: Enchantment Industry Fly 2.5.2 — Modpack Notes
 
 This document describes the Fabric/Create Fly build for Minecraft 26.1.2. It does not describe the NeoForge-only Apothic Enchanting or Apotheosis integrations, and no Sable integration is available for this target.
 

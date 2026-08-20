@@ -13,6 +13,7 @@
     "FishingHookMixin",
     "LightningBoltMixin",
     "LivingEntityMixin",
+    "OpenEndFluidHandlerMixin",
     "PlayerMixin",
     "SmartBlockEntityMixin"
   ],

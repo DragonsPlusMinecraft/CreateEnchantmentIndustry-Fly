@@ -70,6 +70,8 @@ public class BlazeForgerBlock extends BlazeExperienceBlock<BlazeForgerBlockEntit
             Player player,
             InteractionHand hand,
             BlockHitResult hitResult) {
+        if (stack.isEmpty())
+            return InteractionResult.TRY_WITH_EMPTY_HAND;
         var result = super.useItemOn(stack, state, level, pos, player, hand, hitResult);
         if (result != InteractionResult.PASS)
             return result;

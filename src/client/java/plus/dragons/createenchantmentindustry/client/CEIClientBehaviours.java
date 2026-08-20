@@ -34,6 +34,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
@@ -118,6 +119,11 @@ public final class CEIClientBehaviours {
             faceSlotTowardsHit(getSlotPositioning(), getPos());
             return super.testHit(hit);
         }
+
+        @Override
+        public boolean bypassesInput(ItemStack mainhandItem) {
+            return mainhandItem.isEmpty() && blockEntity.hasExtractableItem();
+        }
     }
 
     private static final class ForgerClientBehaviour
@@ -149,6 +155,11 @@ public final class CEIClientBehaviours {
         public boolean testHit(Vec3 hit) {
             faceSlotTowardsHit(getSlotPositioning(), getPos());
             return super.testHit(hit);
+        }
+
+        @Override
+        public boolean bypassesInput(ItemStack mainhandItem) {
+            return mainhandItem.isEmpty() && blockEntity.hasOutput();
         }
     }
 

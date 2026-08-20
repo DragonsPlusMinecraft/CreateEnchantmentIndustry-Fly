@@ -159,7 +159,10 @@ public class EnchanterBehaviour extends ServerScrollValueBehaviour {
     @Override
     public void read(ValueInput input, boolean clientPacket) {
         value = Mth.clamp(input.getIntOr(LEVEL, 0), 0, enchanter.getMaxEnchantLevel());
-        loadTemplate(input.read(TEMPLATE, ItemStack.OPTIONAL_CODEC).orElse(ItemStack.EMPTY));
+        if (!loadTemplate(input.read(TEMPLATE, ItemStack.OPTIONAL_CODEC).orElse(ItemStack.EMPTY))) {
+            value = 0;
+            loadTemplate(ItemStack.EMPTY);
+        }
     }
 
     @Override
