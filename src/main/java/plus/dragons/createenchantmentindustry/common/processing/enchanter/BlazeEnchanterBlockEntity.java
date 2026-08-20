@@ -105,6 +105,10 @@ public class BlazeEnchanterBlockEntity extends BlazeExperienceBlockEntity implem
         return processingTime > 0;
     }
 
+    public boolean hasExtractableItem() {
+        return !heldItem.isEmpty() && activeEnchanting == null && processingTime <= 0;
+    }
+
     @Override
     public void initialize() {
         super.initialize();

@@ -135,8 +135,18 @@ public class BlazeForgerBlockEntity extends BlazeExperienceBlockEntity implement
     public void destroy() {
         super.destroy();
         if (level != null) {
-            Containers.dropContents(level, worldPosition, inventory);
+            for (int slot = 0; slot < inventory.getExposedSlotCount(); slot++) {
+                ItemStack dropped = inventory.extractItem(slot, 1, false);
+                if (!dropped.isEmpty()) {
+                    Containers.dropItemStack(
+                            level, worldPosition.getX(), worldPosition.getY(), worldPosition.getZ(), dropped);
+                }
+            }
         }
+    }
+
+    public boolean hasOutput() {
+        return inventory.hasRemainingOutput();
     }
 
     @Override

@@ -2,7 +2,7 @@
 
 Create: Enchantment Industry Fly brings the core experience and enchantment automation from Create: Enchantment Industry to the Fabric-based Create Fly ecosystem.
 
-The current `2.5.1` build is a **beta** for Minecraft 1.21.11. Back up worlds before updating or testing it.
+The current `2.5.2` build is a **beta** for Minecraft 1.21.11. Back up worlds before updating or testing it.
 
 ## Requirements
 

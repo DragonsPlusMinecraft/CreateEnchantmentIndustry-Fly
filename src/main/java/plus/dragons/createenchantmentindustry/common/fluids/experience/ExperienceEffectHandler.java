@@ -28,10 +28,13 @@ import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import plus.dragons.createenchantmentindustry.common.registry.CEIAdvancements;
+import plus.dragons.createenchantmentindustry.config.CEIConfig;
 
 public class ExperienceEffectHandler implements OpenPipeEffectHandler {
     @Override
     public void apply(Level level, AABB area, FluidStack contained) {
+        if (!CEIConfig.fluids().experienceVaporizeOnPlacement.get())
+            return;
         if (!(level instanceof ServerLevel serverLevel))
             return;
         List<ServerPlayer> players = level.getEntitiesOfClass(
