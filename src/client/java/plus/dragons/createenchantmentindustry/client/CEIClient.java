@@ -75,6 +75,7 @@ public final class CEIClient implements ClientModInitializer {
                 CEIBlocks.BLAZE_ENCHANTER.get(),
                 CEIBlocks.CLASSIC_BLAZE_ENCHANTER.get(),
                 CEIBlocks.BLAZE_FORGER.get(),
+                CEIBlocks.PRINTER.get(),
                 CEIBlocks.EXPERIENCE_LANTERN.get());
     }
 
