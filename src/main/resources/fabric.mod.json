@@ -36,6 +36,9 @@
   "mixins": [
     "create_enchantment_industry.mixins.json"
   ],
+  "custom": {
+    "create_dragons_plus:item/blaze_upgrade_smithing_template": true
+  },
   "depends": {
     "fabricloader": ">=${loader_version}",
     "fabric-api": ">=${fabric_api_version}",
