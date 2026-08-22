@@ -1,6 +1,6 @@
-# Create: Enchantment Industry Fly 2.5.2-b
+# Create: Enchantment Industry Fly 2.5.2-c
 
 ## Fixed
 
-- Fixed the Printer's side tank windows being invisible.
-- Restored Blaze Upgrade Smithing Templates in Bastion Remnant and Nether Fortress loot, along with their duplication recipe in recipe viewers. Previously opened chests are unchanged.
+- Fixed Blaze Enchanters and Blaze Forgers crashing multiplayer clients when previewing or processing enchantments, including template operations.
+- Fixed enchanted-book Printer recipes being unavailable in JEI on multiplayer servers.

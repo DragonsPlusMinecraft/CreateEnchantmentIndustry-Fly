@@ -78,7 +78,7 @@ public final class EnchantedBookPrintingRecipeJEI implements PrintingRecipeJEI {
 
     private OptionalInt getCost() {
         CEIIntIntPair custom = null;
-        var customCosts = CEIDataMaps.PRINTING_ENCHANTED_BOOK_COST.get(enchantment.value());
+        var customCosts = CEIDataMaps.PRINTING_ENCHANTED_BOOK_COST.get(enchantment);
         if (customCosts != null)
             custom = customCosts.stream().filter(pair -> pair.level() == level).findFirst().orElse(null);
         int baseCost = custom == null
